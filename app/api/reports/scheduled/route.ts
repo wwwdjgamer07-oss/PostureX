@@ -1,22 +1,21 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export const runtime = "nodejs";
+export async function POST(req: NextRequest) {
+  const auth = req.headers.get("authorization");
+  const secret = process.env.CRON_SECRET;
 
-export async function POST(request: Request) {
-  const authHeader = request.headers.get("authorization") ?? "";
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
-  const expected = process.env.CRON_SECRET ?? "";
-
-  if (!token || !expected || token !== expected) {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  if (!auth || auth !== `Bearer ${secret}`) {
+    return NextResponse.json(
+      { ok: false, error: "Unauthorized" },
+      { status: 401 }
+    );
   }
 
-  const executedAt = new Date().toISOString();
-  console.log(`[cron] /api/reports/scheduled executed at ${executedAt}`);
+  console.log("Cron executed at:", new Date().toISOString());
 
   return NextResponse.json({
-    success: true,
-    message: "Scheduled reports job executed.",
-    executedAt
+    ok: true,
+    message: "Cron success",
+    time: new Date().toISOString(),
   });
 }
