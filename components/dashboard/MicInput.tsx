@@ -48,6 +48,54 @@ function resolveSpeechError(raw: string) {
   return "Voice input failed. Please try again.";
 }
 
+interface MicDiagnostics {
+  secure: boolean;
+  protocol: string;
+  host: string;
+  permission: "granted" | "denied" | "prompt" | "unknown";
+  audioInputCount: number | null;
+  browser: string;
+}
+
+async function collectMicDiagnostics(): Promise<MicDiagnostics> {
+  const diagnostics: MicDiagnostics = {
+    secure: typeof window !== "undefined" ? window.isSecureContext : false,
+    protocol: typeof window !== "undefined" ? window.location.protocol : "unknown",
+    host: typeof window !== "undefined" ? window.location.host : "unknown",
+    permission: "unknown",
+    audioInputCount: null,
+    browser: typeof navigator !== "undefined" ? navigator.userAgent : "unknown"
+  };
+
+  if (typeof navigator !== "undefined" && "permissions" in navigator) {
+    try {
+      const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
+      if (status.state === "granted" || status.state === "denied" || status.state === "prompt") {
+        diagnostics.permission = status.state;
+      }
+    } catch {
+      diagnostics.permission = "unknown";
+    }
+  }
+
+  if (typeof navigator !== "undefined" && navigator.mediaDevices?.enumerateDevices) {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      diagnostics.audioInputCount = devices.filter((device) => device.kind === "audioinput").length;
+    } catch {
+      diagnostics.audioInputCount = null;
+    }
+  }
+
+  return diagnostics;
+}
+
+function diagnosticsSuffix(d: MicDiagnostics) {
+  const micCount = d.audioInputCount === null ? "unknown" : String(d.audioInputCount);
+  const browser = d.browser.split(" ").slice(0, 2).join(" ");
+  return `Details: secure=${d.secure}, permission=${d.permission}, mics=${micCount}, origin=${d.protocol}//${d.host}, browser=${browser}.`;
+}
+
 export function MicInput({ onTranscript, onError, lang = "en-US" }: MicInputProps) {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const liveTextRef = useRef("");
@@ -154,42 +202,48 @@ export function MicInput({ onTranscript, onError, lang = "en-US" }: MicInputProp
 
   const startListening = useCallback(async () => {
     if (typeof window === "undefined") return;
+    const diagnostics = await collectMicDiagnostics();
+
     if (!window.isSecureContext) {
-      reportError("Voice input needs HTTPS (or localhost).");
-      return;
-    }
-    if (!isRecognitionSupported) {
-      reportError("Speech recognition is not supported here. Use latest Chrome or Edge.");
+      reportError(`Voice input needs HTTPS (or localhost). ${diagnosticsSuffix(diagnostics)}`);
       return;
     }
     if (!navigator.mediaDevices?.getUserMedia) {
-      reportError("Microphone APIs are unavailable in this browser.");
+      reportError(`Microphone APIs are unavailable in this browser. ${diagnosticsSuffix(diagnostics)}`);
       return;
     }
 
+    // Always request microphone permission first so browser permission prompt appears.
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach((track) => track.stop());
     } catch (err) {
       const domErr = err as { name?: string };
       if (domErr?.name === "NotAllowedError") {
-        reportError("Microphone permission denied in browser settings.");
+        reportError(`Microphone permission denied in browser settings. ${diagnosticsSuffix(diagnostics)}`);
         return;
       }
       if (domErr?.name === "NotFoundError") {
-        reportError("No microphone device found.");
+        reportError(`No microphone device found. ${diagnosticsSuffix(diagnostics)}`);
         return;
       }
       if (domErr?.name === "NotReadableError") {
-        reportError("Microphone is busy in another app.");
+        reportError(`Microphone is busy in another app. ${diagnosticsSuffix(diagnostics)}`);
         return;
       }
-      reportError("Microphone access failed.");
+      reportError(`Microphone access failed. ${diagnosticsSuffix(diagnostics)}`);
+      return;
+    }
+
+    if (!isRecognitionSupported) {
+      reportError(
+        `Microphone access is granted, but speech recognition is not supported here. Use latest Chrome or Edge. ${diagnosticsSuffix(diagnostics)}`
+      );
       return;
     }
 
     if (!recognitionRef.current) {
-      reportError("Speech recognizer failed to initialize.");
+      reportError(`Speech recognizer failed to initialize. ${diagnosticsSuffix(diagnostics)}`);
       return;
     }
 
@@ -200,7 +254,7 @@ export function MicInput({ onTranscript, onError, lang = "en-US" }: MicInputProp
       recognitionRef.current.start();
     } catch {
       startingRef.current = false;
-      reportError("Could not start voice input. Try again.");
+      reportError(`Could not start voice input. Try again. ${diagnosticsSuffix(diagnostics)}`);
     }
   }, [isRecognitionSupported, listening, reportError]);
 
@@ -229,19 +283,16 @@ export function MicInput({ onTranscript, onError, lang = "en-US" }: MicInputProp
     await startListening();
   }, [listening, startListening, stopListening]);
 
-  const disabled = !isRecognitionSupported;
-
   return (
     <button
       type="button"
       onClick={toggleListening}
-      disabled={disabled}
       className={cn(
         "grid h-8 w-8 place-items-center rounded-full border transition",
         listening
           ? "border-cyan-300/45 bg-cyan-400/15 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.2)]"
           : "border-slate-500/35 bg-slate-900/65 text-slate-300 hover:border-cyan-300/35 hover:text-cyan-100",
-        disabled ? "cursor-not-allowed opacity-50" : ""
+        !isRecognitionSupported ? "opacity-80" : ""
       )}
       aria-label={listening ? "Stop voice input" : "Start voice input"}
       title={errorState ?? (listening ? "Listening..." : "Voice input")}
