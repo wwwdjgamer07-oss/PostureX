@@ -1,10 +1,4 @@
 {
-  "crons": [
-    {
-      "path": "/api/reports/scheduled",
-      "schedule": "0 * * * *"
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",
