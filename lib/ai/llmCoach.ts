@@ -22,6 +22,7 @@ interface LLMCoachInput {
 interface LLMResult {
   provider: "gemini" | "none";
   text: string | null;
+  model?: string;
   reason?: string;
 }
 
@@ -57,7 +58,23 @@ function resolveGeminiApiKey() {
 
 function resolveGeminiModel() {
   const configured = String(process.env.GOOGLE_AI_MODEL ?? "").trim();
-  return configured || "gemini-1.5-flash";
+  return configured || "gemini-1.5-pro";
+}
+
+function buildGeminiModelCandidates() {
+  const primaryRaw = resolveGeminiModel();
+  const primary = primaryRaw.toLowerCase();
+  const proPool = ["gemini-2.5-pro", "gemini-1.5-pro", "gemini-1.5-pro-latest"];
+  const flashPool = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
+
+  const ordered =
+    primary.includes("flash")
+      ? [primaryRaw, ...flashPool, ...proPool]
+      : primary.includes("pro") || primary === "pro" || primary === "gemini-pro"
+        ? [primaryRaw, ...proPool, ...flashPool]
+        : [primaryRaw, ...proPool, ...flashPool];
+
+  return Array.from(new Set(ordered.map((item) => item.trim()).filter(Boolean))).map(normalizeModelPath);
 }
 
 function normalizeModelPath(model: string) {
@@ -81,7 +98,7 @@ export async function generateLLMCoachResponse(input: LLMCoachInput): Promise<LL
   if (!apiKey) {
     return { provider: "none", text: null, reason: "gemini_key_missing" };
   }
-  const modelPath = normalizeModelPath(resolveGeminiModel());
+  const modelCandidates = buildGeminiModelCandidates();
 
   const userPayload = [
     "User message:",
@@ -126,7 +143,7 @@ export async function generateLLMCoachResponse(input: LLMCoachInput): Promise<LL
     }
   };
 
-  async function callGeminiOnce(timeoutMs: number) {
+  async function callGeminiOnce(modelPath: string, timeoutMs: number) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -148,38 +165,47 @@ export async function generateLLMCoachResponse(input: LLMCoachInput): Promise<LL
   }
 
   try {
-    let response = await callGeminiOnce(15000);
-    if (!response.ok && response.status >= 500) {
-      response = await callGeminiOnce(15000);
+    let lastReason = "gemini_empty_response";
+
+    for (const modelPath of modelCandidates) {
+      let response = await callGeminiOnce(modelPath, 15000);
+      if (!response.ok && response.status >= 500) {
+        response = await callGeminiOnce(modelPath, 15000);
+      }
+
+      if (!response.ok) {
+        const canTryNextModel = (response.status === 400 || response.status === 404) && modelPath !== modelCandidates[modelCandidates.length - 1];
+        lastReason = `gemini_http_${response.status}`;
+        if (canTryNextModel) continue;
+        return { provider: "none", text: null, reason: lastReason };
+      }
+
+      const data = (await response.json()) as GeminiGenerateContentResponse;
+      const text = extractGeminiText(data);
+
+      if (text) {
+        return { provider: "gemini", text: sanitizeSpeech(text), model: modelPath.replace(/^models\//, "") };
+      }
+
+      if (data.promptFeedback?.blockReason) {
+        return { provider: "none", text: null, reason: `gemini_blocked_${data.promptFeedback.blockReason.toLowerCase()}` };
+      }
+
+      lastReason = "gemini_empty_response";
     }
 
-    if (!response.ok) {
-      return { provider: "none", text: null, reason: `gemini_http_${response.status}` };
-    }
-
-    const data = (await response.json()) as GeminiGenerateContentResponse;
-    const text = extractGeminiText(data);
-
-    if (text) {
-      return { provider: "gemini", text: sanitizeSpeech(text) };
-    }
-
-    if (data.promptFeedback?.blockReason) {
-      return { provider: "none", text: null, reason: `gemini_blocked_${data.promptFeedback.blockReason.toLowerCase()}` };
-    }
-
-    return { provider: "none", text: null, reason: "gemini_empty_response" };
+    return { provider: "none", text: null, reason: lastReason };
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       try {
-        const retry = await callGeminiOnce(15000);
+        const retry = await callGeminiOnce(modelCandidates[0], 15000);
         if (!retry.ok) {
           return { provider: "none", text: null, reason: `gemini_http_${retry.status}` };
         }
         const retryData = (await retry.json()) as GeminiGenerateContentResponse;
         const retryText = extractGeminiText(retryData);
         if (retryText) {
-          return { provider: "gemini", text: sanitizeSpeech(retryText) };
+          return { provider: "gemini", text: sanitizeSpeech(retryText), model: modelCandidates[0].replace(/^models\//, "") };
         }
       } catch {
         // Fall through to timeout reason.

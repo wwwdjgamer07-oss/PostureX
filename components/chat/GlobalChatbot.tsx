@@ -101,6 +101,7 @@ export function GlobalChatbot() {
   const [micError, setMicError] = useState<string | null>(null);
   const [messageTone, setMessageTone] = useState<Record<string, string>>({});
   const [messageProvider, setMessageProvider] = useState<Record<string, "gemini" | "system">>({});
+  const [messageModel, setMessageModel] = useState<Record<string, string>>({});
   const [metrics, setMetrics] = useState<PostureAIMetrics>(DEFAULT_METRICS);
   const [memory, setMemory] = useState<UserMemoryRecord | null>(null);
   const [controlEnabled, setControlEnabled] = useState(true);
@@ -477,6 +478,7 @@ export function GlobalChatbot() {
       setMessages((prev) => [...prev, assistantControlReply]);
       setMessageTone((prev) => ({ ...prev, [assistantControlReply.id]: "neutral" }));
       setMessageProvider((prev) => ({ ...prev, [assistantControlReply.id]: "system" }));
+      setMessageModel((prev) => ({ ...prev, [assistantControlReply.id]: "system" }));
       speakText(assistantControlReply.content, "neutral");
       return;
     }
@@ -496,12 +498,17 @@ export function GlobalChatbot() {
             page_context: pageContext
           })
         });
-        if (!response.ok) throw new Error("Coach request failed");
+        if (!response.ok) {
+          const errorPayload = (await response.json().catch(() => null)) as { error?: string; code?: string } | null;
+          const reason = errorPayload?.code ? `${errorPayload.code}` : errorPayload?.error ? errorPayload.error : "Coach request failed";
+          throw new Error(reason);
+        }
         const data = (await response.json()) as {
           message?: PostureAIMessage;
           emotion?: { tone?: string };
           memory?: UserMemoryRecord;
           llm_provider?: "gemini" | "none";
+          llm_model?: string | null;
           llm_reason?: string | null;
         };
         if (process.env.NODE_ENV !== "production") {
@@ -515,13 +522,19 @@ export function GlobalChatbot() {
           ...prev,
           [aiReply.id]: data.llm_provider === "gemini" ? "gemini" : "system"
         }));
+        setMessageModel((prev) => ({
+          ...prev,
+          [aiReply.id]: data.llm_model || "gemini"
+        }));
         if (data.memory) setMemory(data.memory);
         speakText(aiReply.content, data.emotion?.tone ?? "neutral");
-      } catch {
-        const failure = createMessage("assistant", "Gemini is unavailable right now. Please try again.");
+      } catch (errorValue) {
+        const detail = errorValue instanceof Error ? errorValue.message : "unknown_error";
+        const failure = createMessage("assistant", `Gemini is unavailable right now. Please try again. (${detail})`);
         setMessages((prev) => [...prev, failure]);
         setMessageTone((prev) => ({ ...prev, [failure.id]: "neutral" }));
         setMessageProvider((prev) => ({ ...prev, [failure.id]: "system" }));
+        setMessageModel((prev) => ({ ...prev, [failure.id]: "system" }));
       } finally {
         setTyping(false);
       }
@@ -628,7 +641,9 @@ export function GlobalChatbot() {
                     ) : null}
                     {!isUser ? (
                       <p className="mt-1 text-[10px] uppercase tracking-[0.08em] text-cyan-200/70">
-                        {messageProvider[message.id] === "gemini" ? "Gemini" : "System"}
+                        {messageProvider[message.id] === "gemini"
+                          ? `Gemini • ${messageModel[message.id] ?? "mode-unknown"}`
+                          : "System"}
                       </p>
                     ) : null}
                     <p className={cn("mt-1 text-[10px]", isUser ? "text-slate-400" : "text-cyan-200/75")}>{formatTime(message.createdAt)}</p>

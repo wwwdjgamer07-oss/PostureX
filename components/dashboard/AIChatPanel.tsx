@@ -59,6 +59,7 @@ export function AIChatPanel({
   const [emotion, setEmotion] = useState("neutral");
   const [voiceEnabled, setVoiceEnabled] = useState<boolean>(true);
   const [micError, setMicError] = useState<string | null>(null);
+  const [messageModel, setMessageModel] = useState<Record<string, string>>({});
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
   const lastSpokenMessageRef = useRef<string | null>(null);
@@ -227,18 +228,29 @@ export function AIChatPanel({
             }
           })
         });
-        if (!response.ok) throw new Error("Coach request failed");
+        if (!response.ok) {
+          const errorPayload = (await response.json().catch(() => null)) as { error?: string; code?: string } | null;
+          const reason = errorPayload?.code ? `${errorPayload.code}` : errorPayload?.error ? errorPayload.error : "Coach request failed";
+          throw new Error(reason);
+        }
         const data = (await response.json()) as {
           message?: PostureAIMessage;
           emotion?: { primary?: string; tone?: string };
+          llm_model?: string | null;
         };
         const aiReply = data.message ?? createMessage("assistant", "Gemini did not return a response.");
         setMessages((prev) => [...prev, aiReply]);
+        setMessageModel((prev) => ({
+          ...prev,
+          [aiReply.id]: data.llm_model ? `Gemini • ${data.llm_model}` : "Gemini"
+        }));
         if (data.emotion?.primary) setEmotion(data.emotion.primary);
         speakText(aiReply.content, data.emotion?.tone ?? "neutral");
-      } catch {
-        const failure = createMessage("assistant", "Gemini is unavailable right now. Please try again.");
+      } catch (errorValue) {
+        const detail = errorValue instanceof Error ? errorValue.message : "unknown_error";
+        const failure = createMessage("assistant", `Gemini is unavailable right now. Please try again. (${detail})`);
         setMessages((prev) => [...prev, failure]);
+        setMessageModel((prev) => ({ ...prev, [failure.id]: "System" }));
       } finally {
         setTyping(false);
       }
@@ -311,7 +323,7 @@ export function AIChatPanel({
 
         <div ref={scrollerRef} className="flex-1 space-y-3 overflow-y-auto p-3">
           {messages.map((message) => (
-            <AIMessage key={message.id} message={message} />
+            <AIMessage key={message.id} message={message} modelLabel={message.role === "assistant" ? messageModel[message.id] : null} />
           ))}
 
           {typing ? (

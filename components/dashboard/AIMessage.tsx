@@ -6,9 +6,10 @@ import type { PostureAIMessage as PostureAIMessageType } from "@/lib/postureAI";
 
 interface AIMessageProps {
   message: PostureAIMessageType;
+  modelLabel?: string | null;
 }
 
-export function AIMessage({ message }: AIMessageProps) {
+export function AIMessage({ message, modelLabel }: AIMessageProps) {
   const isUser = message.role === "user";
 
   return (
@@ -26,6 +27,11 @@ export function AIMessage({ message }: AIMessageProps) {
           {isUser ? "You" : "AI Coach"}
         </p>
         <p className="leading-relaxed">{message.content}</p>
+        {!isUser && modelLabel ? (
+          <p className="mt-2 text-[10px] uppercase tracking-[0.08em] text-cyan-200/70">
+            {modelLabel}
+          </p>
+        ) : null}
       </div>
     </div>
   );

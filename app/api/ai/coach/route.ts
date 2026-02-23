@@ -343,6 +343,7 @@ export async function POST(request: Request) {
       tone: emotion.coachingTone
     },
     llm_provider: llm.provider,
+    llm_model: llm.model ?? null,
     llm_reason: llm.reason ?? null,
     personality: {
       id: persona.id,
