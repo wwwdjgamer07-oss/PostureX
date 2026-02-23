@@ -773,3 +773,26 @@ html:not(.dark) .px-button-ghost:hover {
   color: #0f172a;
   box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.2), 0 12px 28px rgba(37, 99, 235, 0.12);
 }
+
+/* Light-mode contrast safety net for legacy utility classes. */
+html:not(.dark) .px-shell .text-white,
+html:not(.dark) .px-shell .text-slate-100,
+html:not(.dark) .px-shell .text-slate-200,
+html:not(.dark) .px-shell .text-slate-300,
+html:not(.dark) .px-shell .text-cyan-50,
+html:not(.dark) .px-shell .text-cyan-100,
+html:not(.dark) .px-shell .text-cyan-200 {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .px-shell .text-slate-400,
+html:not(.dark) .px-shell .text-slate-500,
+html:not(.dark) .px-shell .text-slate-600,
+html:not(.dark) .px-shell .text-cyan-300 {
+  color: #334155 !important;
+}
+
+html:not(.dark) .px-shell .text-cyan-700,
+html:not(.dark) .px-shell .text-sky-700 {
+  color: #0c4a6e !important;
+}

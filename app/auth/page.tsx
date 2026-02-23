@@ -198,12 +198,18 @@ export default function AuthPage() {
 
     try {
       const redirectTo = `${getSiteUrl()}/auth/callback?next=/dashboard`;
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo }
       });
 
       if (oauthError) throw oauthError;
+      const oauthUrl = data?.url;
+      if (!oauthUrl) {
+        throw new Error("Google OAuth URL was not returned.");
+      }
+
+      window.location.assign(oauthUrl);
     } catch (oauthFailure) {
       setError(oauthFailure instanceof Error ? oauthFailure.message : "Google OAuth failed.");
       setLoading(false);
@@ -243,8 +249,8 @@ export default function AuthPage() {
   return (
     <main className="px-shell flex min-h-[80vh] w-full max-w-md items-center py-10">
       <div className="px-panel w-full p-6">
-        <h1 className="mb-1 text-2xl font-semibold text-white">PostureX Auth</h1>
-        <p className="mb-6 text-sm text-slate-300">
+        <h1 className="mb-1 text-2xl font-semibold text-slate-900 dark:text-white">PostureX Auth</h1>
+        <p className="mb-6 text-sm text-slate-600 dark:text-slate-300">
           Sign in or create your account.
         </p>
 
@@ -316,7 +322,7 @@ export default function AuthPage() {
           ) : null}
         </form>
 
-        <div className="my-4 h-px bg-white/20" />
+        <div className="my-4 h-px bg-slate-300/55 dark:bg-white/20" />
 
         <button
           type="button"
@@ -342,8 +348,8 @@ export default function AuthPage() {
           </button>
         ) : null}
 
-        {message ? <p className="mt-4 text-sm text-sky-200">{message}</p> : null}
-        {error ? <p className="mt-4 text-sm text-red-200">{error}</p> : null}
+        {message ? <p className="mt-4 text-sm text-sky-700 dark:text-sky-200">{message}</p> : null}
+        {error ? <p className="mt-4 text-sm text-red-600 dark:text-red-200">{error}</p> : null}
       </div>
     </main>
   );

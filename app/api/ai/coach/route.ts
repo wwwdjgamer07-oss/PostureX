@@ -53,7 +53,15 @@ const MAX_HISTORY_CONTENT_LENGTH = 600;
 
 function isGeminiUnavailableReason(reason?: string) {
   if (!reason) return false;
-  if (reason === "gemini_key_missing" || reason === "gemini_exception") return true;
+  if (
+    reason === "gemini_key_missing" ||
+    reason === "gemini_exception" ||
+    reason === "gemini_timeout" ||
+    reason === "gemini_empty_response"
+  ) {
+    return true;
+  }
+  if (reason.startsWith("gemini_blocked_")) return true;
   if (!reason.startsWith("gemini_http_")) return false;
   const statusCode = Number(reason.split("_")[2]);
   if (!Number.isFinite(statusCode)) return false;

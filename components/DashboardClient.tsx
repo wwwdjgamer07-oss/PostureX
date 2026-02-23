@@ -161,7 +161,7 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
     <div className={`px-shell grid gap-6 lg:grid-cols-[220px_1fr] ${layout.compact ? "text-[0.94rem]" : ""}`}>
       <aside className="px-dashboard-sidebar px-panel animate-fade-slide-right sticky top-24 h-fit p-3">
         <div className="mb-4 rounded-2xl border border-cyan-300/30 bg-cyan-400/10 p-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">PostureX Core</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-200">PostureX Core</p>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Operator ID</p>
           <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{userId}</p>
         </div>
@@ -189,7 +189,7 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
 
       <section className="space-y-6">
         <header className={`px-panel px-reveal p-6 ${layout.headerStyle === "minimal" ? "border-cyan-300/20" : ""}`} style={{ animationDelay: "60ms" }}>
-          <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">PostureX Command Center</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-300">PostureX Command Center</p>
           <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">Performance Dashboard</h1>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Live readiness, posture risk, and trend analytics for every session.</p>
           <div className="mt-4 flex flex-wrap gap-3">
@@ -233,7 +233,7 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
               Header: {layout.headerStyle}
             </button>
             {serverWallet ? (
-              <span className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1 text-cyan-100">
+              <span className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1 text-cyan-700 dark:text-cyan-100">
                 Wallet: {serverWallet.coins} PX Coins | {serverWallet.gems.blue}/{serverWallet.gems.purple}/{serverWallet.gems.gold} Gems
               </span>
             ) : null}
@@ -243,7 +243,7 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
               type="button"
               onClick={() => setActiveTab("overview")}
               className={`rounded-lg px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] transition ${
-                activeTab === "overview" ? "bg-cyan-400/20 text-cyan-100" : "text-slate-400 hover:text-slate-200"
+                activeTab === "overview" ? "bg-cyan-400/20 text-cyan-700 dark:text-cyan-100" : "text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
               }`}
             >
               Overview
@@ -252,7 +252,7 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
               type="button"
               onClick={() => setActiveTab("rewards")}
               className={`rounded-lg px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] transition ${
-                activeTab === "rewards" ? "bg-cyan-400/20 text-cyan-100" : "text-slate-400 hover:text-slate-200"
+                activeTab === "rewards" ? "bg-cyan-400/20 text-cyan-700 dark:text-cyan-100" : "text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
               }`}
             >
               Rewards
@@ -303,12 +303,12 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
                   <div className="absolute inset-3 rounded-full border border-cyan-300/30" />
                   <p className="text-4xl font-semibold text-cyan-200">{liveScore}</p>
                 </div>
-                <p className="mx-auto inline-flex w-fit rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-cyan-100">
+                <p className="mx-auto inline-flex w-fit rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-cyan-700 dark:text-cyan-100">
                   {latestSession?.source === "sensor" ? "Sensor Tracking" : "Camera Tracking"}
                 </p>
 
                 <div className="mx-auto w-full max-w-[220px] rounded-2xl border border-cyan-300/35 bg-cyan-400/10 px-4 py-3 shadow-[0_0_24px_rgba(34,211,238,0.2)]">
-                  <p className="inline-flex items-center gap-2 text-base font-semibold text-cyan-100">
+                  <p className="inline-flex items-center gap-2 text-base font-semibold text-cyan-700 dark:text-cyan-100">
                     <Flame className="h-4 w-4 text-cyan-200" />
                     {initialDailyProgress.streak} day streak
                   </p>
@@ -383,7 +383,7 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
         </article> : null}
 
         <article className="px-panel px-reveal p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Dashboard Widgets</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-slate-600 dark:text-slate-400">Dashboard Widgets</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {["dailyScore", "sessions", "risk", "streak", "alerts", "scoreChart", "systemStatus", "weeklyTrend", "recentSessions"].map((widget) => (
               <button
@@ -392,8 +392,8 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
                 onClick={() => toggleWidget(widget)}
                 className={`rounded-full border px-3 py-1 text-xs ${
                   isVisible(widget)
-                    ? "border-cyan-300/35 bg-cyan-400/10 text-cyan-100"
-                    : "border-slate-500/35 bg-slate-900/50 text-slate-400"
+                    ? "border-cyan-300/35 bg-cyan-400/10 text-cyan-700 dark:text-cyan-100"
+                    : "border-slate-400/35 bg-white/70 text-slate-700 dark:border-slate-500/35 dark:bg-slate-900/50 dark:text-slate-400"
                 }`}
               >
                 {widget}
@@ -408,13 +408,13 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Rewards Progress</h2>
               <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Posture Games rewards are tied to posture quality and correction performance.</p>
               <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <p className="px-kpi text-sm text-slate-200 inline-flex items-center gap-1.5">
+                <p className="px-kpi inline-flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-200">
                   {isObsidianSkull ? <SkullCoinIcon className="h-4 w-4 text-violet-200" /> : null}
-                  PX Coins: <span className="font-semibold text-cyan-200">{displayedPxCoins}</span>
+                  PX Coins: <span className="font-semibold text-cyan-700 dark:text-cyan-200">{displayedPxCoins}</span>
                 </p>
-                <p className="px-kpi text-sm text-slate-200">XP: <span className="font-semibold text-cyan-200">{rewardProgress.xp}</span></p>
-                <p className="px-kpi text-sm text-slate-200">Level: <span className="font-semibold text-cyan-200">{rewardProgress.level}</span></p>
-                <p className="px-kpi text-sm text-slate-200">Avatar Stage: <span className="font-semibold text-cyan-200">{rewardProgress.avatarStage}</span></p>
+                <p className="px-kpi text-sm text-slate-700 dark:text-slate-200">XP: <span className="font-semibold text-cyan-700 dark:text-cyan-200">{rewardProgress.xp}</span></p>
+                <p className="px-kpi text-sm text-slate-700 dark:text-slate-200">Level: <span className="font-semibold text-cyan-700 dark:text-cyan-200">{rewardProgress.level}</span></p>
+                <p className="px-kpi text-sm text-slate-700 dark:text-slate-200">Avatar Stage: <span className="font-semibold text-cyan-700 dark:text-cyan-200">{rewardProgress.avatarStage}</span></p>
               </div>
               <div className="mt-4">
                 <XPBar current={xpLevelState.currentLevelXp} total={xpLevelState.nextLevelXp} />
@@ -428,8 +428,8 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
                   const unlocked = rewardProgress.badges.includes(badge.id);
                   return (
                     <div key={badge.id} className={`rounded-xl border p-3 ${unlocked ? "border-cyan-300/35 bg-cyan-400/10" : "border-slate-500/30 bg-slate-900/40"}`}>
-                      <p className={`text-sm font-semibold ${unlocked ? "text-cyan-100" : "text-slate-300"}`}>{badge.title}</p>
-                      <p className="mt-1 text-xs text-slate-400">{badge.description}</p>
+                      <p className={`text-sm font-semibold ${unlocked ? "text-cyan-700 dark:text-cyan-100" : "text-slate-700 dark:text-slate-300"}`}>{badge.title}</p>
+                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{badge.description}</p>
                     </div>
                   );
                 })}
@@ -446,7 +446,7 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
                   <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Themes</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {rewardProgress.unlockedThemes.map((theme) => (
-                      <span key={theme} className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1 text-xs text-cyan-100">
+                      <span key={theme} className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1 text-xs text-cyan-700 dark:text-cyan-100">
                         {theme}
                       </span>
                     ))}
@@ -456,7 +456,7 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
                   <p className="text-xs uppercase tracking-[0.16em] text-slate-400">AI Coach Personalities</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {rewardProgress.unlockedCoachPersonalities.map((style) => (
-                      <span key={style} className="rounded-full border border-slate-500/35 bg-slate-900/50 px-3 py-1 text-xs text-slate-200">
+                      <span key={style} className="rounded-full border border-slate-400/35 bg-white/70 px-3 py-1 text-xs text-slate-700 dark:border-slate-500/35 dark:bg-slate-900/50 dark:text-slate-200">
                         {style}
                       </span>
                     ))}

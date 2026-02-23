@@ -26,7 +26,14 @@ interface LLMResult {
 }
 
 interface GeminiGenerateContentResponse {
+  error?: {
+    message?: string;
+  };
+  promptFeedback?: {
+    blockReason?: string;
+  };
   candidates?: Array<{
+    finishReason?: string;
     content?: {
       parts?: Array<{ text?: string }>;
     };
@@ -44,11 +51,41 @@ function sanitizeSpeech(text: string) {
     .trim();
 }
 
+function resolveGeminiApiKey() {
+  return (
+    String(process.env.GEMINI_API_KEY ?? "").trim() ||
+    String(process.env.GOOGLE_API_KEY ?? "").trim() ||
+    String(process.env.GOOGLE_GENAI_API_KEY ?? "").trim()
+  );
+}
+
+function resolveGeminiModel() {
+  const configured = String(process.env.GOOGLE_AI_MODEL ?? "").trim();
+  return configured || "gemini-1.5-flash";
+}
+
+function normalizeModelPath(model: string) {
+  if (model.startsWith("models/")) return model;
+  return `models/${model}`;
+}
+
+function extractGeminiText(data: GeminiGenerateContentResponse) {
+  const candidates = Array.isArray(data.candidates) ? data.candidates : [];
+  const parts = candidates.flatMap((candidate) => candidate.content?.parts ?? []);
+  const text = parts
+    .map((part) => String(part.text ?? "").trim())
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+  return text || null;
+}
+
 export async function generateLLMCoachResponse(input: LLMCoachInput): Promise<LLMResult> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = resolveGeminiApiKey();
   if (!apiKey) {
     return { provider: "none", text: null, reason: "gemini_key_missing" };
   }
+  const modelPath = normalizeModelPath(resolveGeminiModel());
 
   const userPayload = [
     "User message:",
@@ -98,7 +135,7 @@ export async function generateLLMCoachResponse(input: LLMCoachInput): Promise<LL
 
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/${modelPath}:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: {
@@ -114,14 +151,21 @@ export async function generateLLMCoachResponse(input: LLMCoachInput): Promise<LL
     }
 
     const data = (await response.json()) as GeminiGenerateContentResponse;
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const text = extractGeminiText(data);
 
-    if (typeof text === "string" && text.trim()) {
+    if (text) {
       return { provider: "gemini", text: sanitizeSpeech(text) };
     }
 
-    return { provider: "none", text: null, reason: "gemini_exception" };
-  } catch {
+    if (data.promptFeedback?.blockReason) {
+      return { provider: "none", text: null, reason: `gemini_blocked_${data.promptFeedback.blockReason.toLowerCase()}` };
+    }
+
+    return { provider: "none", text: null, reason: "gemini_empty_response" };
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      return { provider: "none", text: null, reason: "gemini_timeout" };
+    }
     return { provider: "none", text: null, reason: "gemini_exception" };
   } finally {
     clearTimeout(timeout);
