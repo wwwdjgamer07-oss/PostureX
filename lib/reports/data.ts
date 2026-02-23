@@ -173,11 +173,36 @@ async function selectSessions(supabase: SupabaseClient, userId: string, range: R
     .gte("started_at", startIso)
     .lte("started_at", endIso);
 
-  if (fallback.error) {
+  if (!fallback.error) {
+    return (fallback.data ?? []) as SessionLikeRow[];
+  }
+
+  const normalizedError = String(fallback.error.message || "").toLowerCase();
+  const missingAvgFatigue = normalizedError.includes("avg_fatigue") && normalizedError.includes("does not exist");
+  if (!missingAvgFatigue) {
     throw new Error(fallback.error.message || "Failed to load sessions.");
   }
 
-  return (fallback.data ?? []) as SessionLikeRow[];
+  // Compatibility fallback for schemas that do not include avg_fatigue.
+  const fallbackWithoutFatigue = await supabase
+    .from("sessions")
+    .select("started_at,duration_seconds,avg_alignment,avg_symmetry,peak_risk,risk_level")
+    .eq("user_id", userId)
+    .gte("started_at", startIso)
+    .lte("started_at", endIso);
+
+  if (fallbackWithoutFatigue.error) {
+    throw new Error(fallbackWithoutFatigue.error.message || "Failed to load sessions.");
+  }
+
+  return ((fallbackWithoutFatigue.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+    started_at: (row.started_at as string | null) ?? null,
+    duration_seconds: toNumber(row.duration_seconds, 0),
+    avg_alignment: toNumber(row.avg_alignment, 0),
+    avg_symmetry: toNumber(row.avg_symmetry, 0),
+    avg_fatigue: 0,
+    peak_risk: String(row.peak_risk ?? row.risk_level ?? "LOW")
+  }));
 }
 
 async function selectSlouchEvents(supabase: SupabaseClient, userId: string, range: ReportRange) {
@@ -205,6 +230,11 @@ async function selectSlouchEvents(supabase: SupabaseClient, userId: string, rang
     .in("level", ["MODERATE", "HIGH", "SEVERE", "CRITICAL"]);
 
   if (fallback.error) {
+    const normalizedError = String(fallback.error.message || "").toLowerCase();
+    const missingTable = normalizedError.includes("public.risk_events") && normalizedError.includes("schema cache");
+    if (missingTable) {
+      return [];
+    }
     throw new Error(fallback.error.message || "Failed to load posture events.");
   }
 
