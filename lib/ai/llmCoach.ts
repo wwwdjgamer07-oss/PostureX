@@ -52,11 +52,7 @@ function sanitizeSpeech(text: string) {
 }
 
 function resolveGeminiApiKey() {
-  return (
-    String(process.env.GEMINI_API_KEY ?? "").trim() ||
-    String(process.env.GOOGLE_API_KEY ?? "").trim() ||
-    String(process.env.GOOGLE_GENAI_API_KEY ?? "").trim()
-  );
+  return String(process.env.GOOGLE_AI_API_KEY ?? "").trim();
 }
 
 function resolveGeminiModel() {
