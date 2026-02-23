@@ -100,7 +100,7 @@ export function GlobalChatbot() {
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [micError, setMicError] = useState<string | null>(null);
   const [messageTone, setMessageTone] = useState<Record<string, string>>({});
-  const [messageProvider, setMessageProvider] = useState<Record<string, "gemini" | "openai" | "fallback">>({});
+  const [messageProvider, setMessageProvider] = useState<Record<string, "gemini" | "system">>({});
   const [metrics, setMetrics] = useState<PostureAIMetrics>(DEFAULT_METRICS);
   const [memory, setMemory] = useState<UserMemoryRecord | null>(null);
   const [controlEnabled, setControlEnabled] = useState(true);
@@ -476,7 +476,7 @@ export function GlobalChatbot() {
       const assistantControlReply = createMessage("assistant", controlResult);
       setMessages((prev) => [...prev, assistantControlReply]);
       setMessageTone((prev) => ({ ...prev, [assistantControlReply.id]: "neutral" }));
-      setMessageProvider((prev) => ({ ...prev, [assistantControlReply.id]: "fallback" }));
+      setMessageProvider((prev) => ({ ...prev, [assistantControlReply.id]: "system" }));
       speakText(assistantControlReply.content, "neutral");
       return;
     }
@@ -501,7 +501,7 @@ export function GlobalChatbot() {
           message?: PostureAIMessage;
           emotion?: { tone?: string };
           memory?: UserMemoryRecord;
-          llm_provider?: "openai" | "gemini" | "none";
+          llm_provider?: "gemini" | "none";
           llm_reason?: string | null;
         };
         if (process.env.NODE_ENV !== "production") {
@@ -513,16 +513,15 @@ export function GlobalChatbot() {
         setMessageTone((prev) => ({ ...prev, [aiReply.id]: data.emotion?.tone ?? "neutral" }));
         setMessageProvider((prev) => ({
           ...prev,
-          [aiReply.id]: data.llm_provider === "gemini" ? "gemini" : data.llm_provider === "openai" ? "openai" : "fallback"
+          [aiReply.id]: data.llm_provider === "gemini" ? "gemini" : "system"
         }));
         if (data.memory) setMemory(data.memory);
         speakText(aiReply.content, data.emotion?.tone ?? "neutral");
       } catch {
-        const fallback = createMessage("assistant", "Quick reset: relax your shoulders, align your neck, and take one slow breath.");
-        setMessages((prev) => [...prev, fallback]);
-        setMessageTone((prev) => ({ ...prev, [fallback.id]: "neutral" }));
-        setMessageProvider((prev) => ({ ...prev, [fallback.id]: "fallback" }));
-        speakText(fallback.content, "neutral");
+        const failure = createMessage("assistant", "Gemini is unavailable right now. Please try again.");
+        setMessages((prev) => [...prev, failure]);
+        setMessageTone((prev) => ({ ...prev, [failure.id]: "neutral" }));
+        setMessageProvider((prev) => ({ ...prev, [failure.id]: "system" }));
       } finally {
         setTyping(false);
       }
@@ -629,11 +628,7 @@ export function GlobalChatbot() {
                     ) : null}
                     {!isUser ? (
                       <p className="mt-1 text-[10px] uppercase tracking-[0.08em] text-cyan-200/70">
-                        {messageProvider[message.id] === "gemini"
-                          ? "Gemini"
-                          : messageProvider[message.id] === "openai"
-                            ? "OpenAI"
-                            : "Fallback"}
+                        {messageProvider[message.id] === "gemini" ? "Gemini" : "System"}
                       </p>
                     ) : null}
                     <p className={cn("mt-1 text-[10px]", isUser ? "text-slate-400" : "text-cyan-200/75")}>{formatTime(message.createdAt)}</p>

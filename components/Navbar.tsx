@@ -114,7 +114,7 @@ export function Navbar() {
   };
 
   return (
-    <header className="px-navbar fixed inset-x-0 top-0 z-50 border-b border-slate-500/20 bg-[#0b0f14]/85 backdrop-blur-2xl">
+    <header className="px-navbar fixed inset-x-0 top-0 z-50 border-b border-slate-300/45 bg-white/80 backdrop-blur-2xl dark:border-slate-500/20 dark:bg-[#0b0f14]/85">
       <div className="px-shell flex h-16 items-center justify-between gap-4">
         <Link href="/" className="group inline-flex items-center gap-3">
           <div className={cn(
@@ -126,8 +126,8 @@ export function Navbar() {
             ) : "PX"}
           </div>
           <div className="hidden sm:block">
-            <p className="text-sm font-semibold tracking-tight text-white">PostureX</p>
-            <p className={cn("text-[10px] uppercase tracking-[0.22em] text-slate-400", isObsidianSkull ? "text-violet-200/85" : "")}>
+            <p className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">PostureX</p>
+            <p className={cn("text-[10px] uppercase tracking-[0.22em] text-slate-600 dark:text-slate-400", isObsidianSkull ? "text-violet-300 dark:text-violet-200/85" : "")}>
               {isObsidianSkull ? "Obsidian Skull Edition" : "Posture Intelligence Engine"}
             </p>
           </div>
@@ -152,8 +152,8 @@ export function Navbar() {
                 className={cn(
                   "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition",
                   pathname === link.href
-                    ? "border border-cyan-300/40 bg-cyan-400/10 text-cyan-100"
-                    : "border border-transparent text-slate-300 hover:border-slate-500/40 hover:bg-slate-800/70 hover:text-white"
+                    ? "border border-cyan-300/50 bg-cyan-500/10 text-cyan-700 dark:border-cyan-300/40 dark:bg-cyan-400/10 dark:text-cyan-100"
+                    : "border border-transparent text-slate-700 hover:border-slate-300/80 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:border-slate-500/40 dark:hover:bg-slate-800/70 dark:hover:text-white"
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -178,7 +178,7 @@ export function Navbar() {
         <button
           type="button"
           onClick={() => setMobileOpen((v) => !v)}
-          className="rounded-xl border border-slate-500/40 bg-slate-900/70 p-2 text-slate-200 md:hidden"
+          className="rounded-xl border border-slate-300/80 bg-white/80 p-2 text-slate-700 dark:border-slate-500/40 dark:bg-slate-900/70 dark:text-slate-200 md:hidden"
           aria-label="Toggle menu"
         >
           {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
@@ -186,7 +186,7 @@ export function Navbar() {
       </div>
 
       {mobileOpen ? (
-        <div className="border-t border-slate-500/25 bg-[#0b0f14]/95 p-4 md:hidden">
+        <div className="border-t border-slate-300/55 bg-white/95 p-4 dark:border-slate-500/25 dark:bg-[#0b0f14]/95 md:hidden">
           <div className="flex flex-col gap-2">
             {links.map((link) => {
               const Icon =
@@ -206,7 +206,9 @@ export function Navbar() {
                   onClick={() => setMobileOpen(false)}
                   className={cn(
                     "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm",
-                    pathname === link.href ? "bg-cyan-400/15 text-cyan-100" : "text-slate-300"
+                    pathname === link.href
+                      ? "bg-cyan-500/10 text-cyan-700 dark:bg-cyan-400/15 dark:text-cyan-100"
+                      : "text-slate-700 dark:text-slate-300"
                   )}
                 >
                   <Icon className="h-4 w-4" />

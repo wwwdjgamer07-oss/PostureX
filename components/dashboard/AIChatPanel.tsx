@@ -10,7 +10,7 @@ import { EmotionIndicator } from "@/components/dashboard/EmotionIndicator";
 import { MicInput } from "@/components/dashboard/MicInput";
 import { VoiceToggle } from "@/components/dashboard/VoiceToggle";
 import { prepareSpeechText, resolvePreferredVoice, resolveVoiceProfile } from "@/lib/ai/voiceEngine";
-import { buildPostureAIReply, buildWelcomeMessage, type PostureAIMetrics, type PostureAIMessage } from "@/lib/postureAI";
+import { buildWelcomeMessage, type PostureAIMetrics, type PostureAIMessage } from "@/lib/postureAI";
 import { useIsObsidianSkullTheme } from "@/lib/personalization/usePxTheme";
 import { cn } from "@/lib/utils";
 
@@ -232,14 +232,13 @@ export function AIChatPanel({
           message?: PostureAIMessage;
           emotion?: { primary?: string; tone?: string };
         };
-        const aiReply = data.message ?? createMessage("assistant", buildPostureAIReply(trimmed, metrics));
+        const aiReply = data.message ?? createMessage("assistant", "Gemini did not return a response.");
         setMessages((prev) => [...prev, aiReply]);
         if (data.emotion?.primary) setEmotion(data.emotion.primary);
         speakText(aiReply.content, data.emotion?.tone ?? "neutral");
       } catch {
-        const fallback = createMessage("assistant", buildPostureAIReply(trimmed, metrics));
-        setMessages((prev) => [...prev, fallback]);
-        speakText(fallback.content, "neutral");
+        const failure = createMessage("assistant", "Gemini is unavailable right now. Please try again.");
+        setMessages((prev) => [...prev, failure]);
       } finally {
         setTyping(false);
       }

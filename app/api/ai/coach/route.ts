@@ -2,7 +2,6 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { detectEmotionSignal, type EmotionLabel } from "@/lib/ai/emotionEngine";
 import { buildUpdatedMemory, createDefaultMemory, type UserMemoryRecord } from "@/lib/ai/memoryEngine";
 import { generateLLMCoachResponse } from "@/lib/ai/llmCoach";
-import { generateCoachResponse } from "@/lib/ai/responseGenerator";
 import { selectCoachPersona } from "@/lib/ai/coachPersona";
 import type { PostureAIMetrics, PostureAIMessage } from "@/lib/postureAI";
 import { sanitizeText } from "@/lib/api/request";
@@ -50,23 +49,6 @@ const RISK_LEVELS = new Set(["LOW", "MODERATE", "HIGH", "SEVERE"]);
 const MAX_MESSAGE_LENGTH = 1200;
 const MAX_HISTORY_MESSAGES = 12;
 const MAX_HISTORY_CONTENT_LENGTH = 600;
-
-function isGeminiUnavailableReason(reason?: string) {
-  if (!reason) return false;
-  if (
-    reason === "gemini_key_missing" ||
-    reason === "gemini_exception" ||
-    reason === "gemini_timeout" ||
-    reason === "gemini_empty_response"
-  ) {
-    return true;
-  }
-  if (reason.startsWith("gemini_blocked_")) return true;
-  if (!reason.startsWith("gemini_http_")) return false;
-  const statusCode = Number(reason.split("_")[2]);
-  if (!Number.isFinite(statusCode)) return false;
-  return [401, 403, 408, 429, 500, 502, 503, 504].includes(statusCode);
-}
 
 function asStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -265,24 +247,15 @@ export async function POST(request: Request) {
     history: recentHistory,
     pageContext: body.page_context
   });
-  const isGeminiUnavailable = llm.provider === "none" && isGeminiUnavailableReason(llm.reason);
+  if (llm.provider !== "gemini" || !llm.text) {
+    return apiError(
+      "Gemini is unavailable right now. Please try again in a moment.",
+      503,
+      llm.reason || "GEMINI_UNAVAILABLE"
+    );
+  }
 
-  const fallbackMessage = isGeminiUnavailable
-    ? generateCoachResponse({
-        userMessage,
-        metrics,
-        emotion,
-        persona,
-        memory: existingMemory,
-        history: recentHistory,
-        pageContext: body.page_context
-      })
-    : null;
-
-  const assistantMessage =
-    llm.text ??
-    fallbackMessage ??
-    "I am still with you. Please rephrase once and I will answer clearly.";
+  const assistantMessage = llm.text;
 
   const updatedMemory = buildUpdatedMemory({
     userMessage,

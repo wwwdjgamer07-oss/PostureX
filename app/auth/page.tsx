@@ -76,24 +76,41 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const query = new URLSearchParams(window.location.search);
+    const run = async () => {
+      const query = new URLSearchParams(window.location.search);
 
-    if (query.get("reset") === "success") {
-      setMode("signin");
-      setMessage("Password updated. Please sign in with your new password.");
-    }
+      if (query.get("reset") === "success") {
+        setMode("signin");
+        setMessage("Password updated. Please sign in with your new password.");
+      }
 
-    const queryError = query.get("error");
-    if (queryError === "verification_link_expired") {
-      setError("Verification link expired. Request new link.");
-    }
-    if (queryError === "pkce_verifier_missing") {
-      setError("Login link is invalid for this browser session. Start sign-in again from this same browser.");
-    }
-    if (queryError === "auth_callback_failed") {
-      setError("Could not complete sign-in. Please try again.");
-    }
-  }, []);
+      const code = query.get("code");
+      if (code) {
+        const nextParam = query.get("next");
+        const nextPath = nextParam && nextParam.startsWith("/") ? nextParam : "/dashboard";
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        if (exchangeError) {
+          setError("Google sign-in could not be completed. Please try again.");
+          return;
+        }
+        router.replace(nextPath);
+        return;
+      }
+
+      const queryError = query.get("error");
+      if (queryError === "verification_link_expired") {
+        setError("Verification link expired. Request new link.");
+      }
+      if (queryError === "pkce_verifier_missing") {
+        setError("Login link is invalid for this browser session. Start sign-in again from this same browser.");
+      }
+      if (queryError === "auth_callback_failed") {
+        setError("Could not complete sign-in. Please try again.");
+      }
+    };
+
+    void run();
+  }, [router, supabase.auth]);
 
   useEffect(() => {
     const initialize = async () => {
@@ -197,7 +214,7 @@ export default function AuthPage() {
     setMessage(null);
 
     try {
-      const redirectTo = `${getSiteUrl()}/auth/callback?next=/dashboard`;
+      const redirectTo = `${getSiteUrl()}/auth?next=/dashboard`;
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo }
