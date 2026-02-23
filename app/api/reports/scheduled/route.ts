@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { deliverScheduledReports } from "@/lib/reports/service";
 
 export const runtime = "nodejs";
 
@@ -27,11 +29,29 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  console.log("Cron executed at:", new Date().toISOString());
+  const startedAt = new Date().toISOString();
+  console.log("Cron executed at:", startedAt);
 
-  return NextResponse.json({
-    ok: true,
-    message: "Cron success",
-    time: new Date().toISOString(),
-  });
+  try {
+    const supabase = createAdminSupabaseClient();
+    const results = await deliverScheduledReports({ supabase });
+    const sent = results.filter((item) => item.result.ok).length;
+    const skipped = results.filter((item) => !item.result.ok && item.result.reason).length;
+    const failed = results.filter((item) => !item.result.ok && !item.result.reason).length;
+
+    return NextResponse.json({
+      ok: true,
+      message: "Cron success",
+      time: startedAt,
+      summary: {
+        attempted: results.length,
+        sent,
+        skipped,
+        failed
+      }
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Scheduled reports failed.";
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+  }
 }
