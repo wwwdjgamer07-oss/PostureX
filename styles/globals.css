@@ -24,23 +24,34 @@
 
 html,
 body {
-  height: 100%;
-  min-height: 100%;
   margin: 0;
   padding: 0;
-  background: #0b0f1a;
+  background: #06080f;
+  color: #eaf2ff;
+  min-height: 100%;
+  overscroll-behavior: none;
 }
 
 #__next {
-  min-height: 100%;
-  background: radial-gradient(circle at 20% 20%, #0f172a, #020617 70%);
+  min-height: 100dvh;
+  background: transparent;
 }
 
 body {
+  min-height: 100dvh;
   font-family: "Inter", "Space Grotesk", "Segoe UI", sans-serif;
   color: var(--px-text);
-  background: var(--px-bg);
-  overscroll-behavior: none;
+  background:
+    radial-gradient(900px 500px at 50% -200px, rgba(0, 255, 200, 0.1), transparent),
+    radial-gradient(700px 400px at 80% 20%, rgba(0, 150, 255, 0.08), transparent),
+    linear-gradient(180deg, #04060c 0%, #070b14 40%, #06080f 100%);
+  background-attachment: fixed;
+  font-feature-settings: "ss01", "ss02";
+}
+
+main {
+  min-height: 100dvh;
+  background: transparent;
 }
 
 @layer base {
@@ -99,9 +110,8 @@ div {
 @layer components {
   .app-root {
     position: relative;
-    min-height: 100vh;
     min-height: 100dvh;
-    background: radial-gradient(circle at 20% 20%, #0f172a, #020617 70%);
+    background: transparent;
     overflow-x: hidden;
     overscroll-behavior: contain;
   }
@@ -122,6 +132,41 @@ div {
   .card {
     background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.95));
     backdrop-filter: blur(12px);
+  }
+
+  .px-card {
+    background: linear-gradient(145deg, rgba(20, 25, 40, 0.75), rgba(10, 14, 24, 0.85));
+    backdrop-filter: blur(18px) saturate(140%);
+    border-radius: 22px;
+    border: 1px solid rgba(120, 160, 255, 0.18);
+    box-shadow:
+      0 10px 30px rgba(0, 0, 0, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .px-glow {
+    box-shadow:
+      0 0 0 1px rgba(0, 255, 200, 0.25),
+      0 0 20px rgba(0, 255, 200, 0.15),
+      0 10px 30px rgba(0, 0, 0, 0.5);
+  }
+
+  .px-title {
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: #9fdcff;
+  }
+
+  .px-value {
+    font-size: 42px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+
+  .px-sub {
+    color: #9bb0d6;
+    font-size: 13px;
   }
 
   .px-shell {
@@ -790,6 +835,12 @@ html[data-ui-skin="px-elite"] .px-panel {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    background-attachment: scroll;
   }
 }
 

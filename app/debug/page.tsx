@@ -14,9 +14,9 @@ export default function RiskDebugger() {
   const color = RISK_COLORS[risk];
 
   return (
-    <div className="min-h-screen p-8 bg-gray-50 text-gray-900 font-sans">
-      <div className="max-w-2xl mx-auto bg-white p-6 rounded-xl shadow-lg">
-        <h1 className="text-3xl font-bold mb-6 border-b pb-4">Risk Engine Debugger</h1>
+    <div className="min-h-dvh bg-transparent p-8 font-sans text-slate-100">
+      <div className="mx-auto max-w-2xl rounded-xl border border-cyan-300/20 bg-slate-900/80 p-6 shadow-lg backdrop-blur-xl">
+        <h1 className="mb-6 border-b border-cyan-300/20 pb-4 text-3xl font-bold">Risk Engine Debugger</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
           {/* Inputs */}
@@ -27,7 +27,7 @@ export default function RiskDebugger() {
                 type="number"
                 value={score}
                 onChange={(e) => setScore(Number(e.target.value))}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full rounded border border-cyan-300/25 bg-slate-900/80 p-2 text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
               />
               <input
                 type="range"
@@ -45,7 +45,7 @@ export default function RiskDebugger() {
                 type="number"
                 value={fatigue}
                 onChange={(e) => setFatigue(Number(e.target.value))}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full rounded border border-cyan-300/25 bg-slate-900/80 p-2 text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
               />
               <input
                 type="range"
@@ -59,16 +59,16 @@ export default function RiskDebugger() {
           </div>
 
           {/* Results */}
-          <div className="bg-gray-100 p-6 rounded-lg flex flex-col justify-center items-center text-center">
-            <h2 className="text-sm uppercase tracking-wide text-gray-500 mb-2">Calculated Risk</h2>
+          <div className="flex flex-col items-center justify-center rounded-lg border border-cyan-300/20 bg-slate-950/70 p-6 text-center">
+            <h2 className="mb-2 text-sm uppercase tracking-wide text-slate-400">Calculated Risk</h2>
             <div
               className="text-4xl font-black mb-2"
               style={{ color: color }}
             >
               {risk}
             </div>
-            <p className="text-sm text-gray-600">{explanation}</p>
-            <div className="mt-4 text-xs text-gray-400">
+            <p className="text-sm text-slate-300">{explanation}</p>
+            <div className="mt-4 text-xs text-slate-500">
               Adjusted Score: {adjustedScore.toFixed(2)}
             </div>
           </div>

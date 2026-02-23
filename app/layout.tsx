@@ -64,7 +64,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className="min-h-screen antialiased">
+      <body className="antialiased">
         <ThemeController />
         <PXPersonalizationController />
         <AuthHashRouter />
@@ -72,7 +72,7 @@ export default function RootLayout({
         <DailyReminderScheduler />
         <Navbar />
         <Toaster richColors theme="dark" position="top-right" />
-        <main className="app-root pt-20 pb-8">{children}</main>
+        <main className="app-root min-h-dvh flex flex-col px-4 pt-20 pb-10">{children}</main>
         <GlobalChatbot />
       </body>
     </html>

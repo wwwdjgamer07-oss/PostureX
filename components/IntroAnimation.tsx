@@ -26,7 +26,7 @@ export function IntroAnimation() {
   }, [goDashboard]);
 
   return (
-    <section className="relative flex min-h-screen items-center justify-center overflow-hidden">
+    <section className="relative flex min-h-dvh items-center justify-center overflow-hidden">
       <GlowBackground />
 
       <div className="relative z-10 mx-auto flex w-full max-w-2xl flex-col items-center px-6 text-center">
