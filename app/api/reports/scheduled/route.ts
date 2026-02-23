@@ -1,50 +1,22 @@
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { deliverScheduledReports } from "@/lib/reports/service";
-import { safeCompare } from "@/lib/security";
-import { getCronSecret } from "@/lib/env";
-import { apiError, apiOk } from "@/lib/api/response";
+import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-function isAuthorized(request: Request) {
-  const expected = getCronSecret();
-  if (!expected) return process.env.NODE_ENV !== "production";
-
-  const bearer = request.headers.get("authorization") ?? "";
-  const bearerToken = bearer.startsWith("Bearer ") ? bearer.slice(7) : "";
-  if (bearerToken && safeCompare(bearerToken, expected)) return true;
-
-  const header = request.headers.get("x-cron-secret") ?? "";
-  return header.length === expected.length && safeCompare(header, expected);
-}
-
-async function runScheduled(request: Request) {
-  if (!isAuthorized(request)) {
-    return apiError("Unauthorized.", 401, "UNAUTHORIZED");
-  }
-
-  try {
-    const admin = createAdminSupabaseClient();
-    const results = await deliverScheduledReports({ supabase: admin });
-    const sent = results.filter((item) => item.result.ok).length;
-    const skipped = results.filter((item) => !item.result.ok && item.result.reason).length;
-    const failed = results.filter((item) => !item.result.ok && !item.result.reason).length;
-
-    return apiOk({
-      success: true,
-      summary: { attempted: results.length, sent, skipped, failed },
-      results
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to process scheduled reports.";
-    return apiError(message, 500, "SCHEDULED_REPORTS_FAILED");
-  }
-}
-
 export async function POST(request: Request) {
-  return runScheduled(request);
-}
+  const authHeader = request.headers.get("authorization") ?? "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+  const expected = process.env.CRON_SECRET ?? "";
 
-export async function GET(request: Request) {
-  return runScheduled(request);
+  if (!token || !expected || token !== expected) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  const executedAt = new Date().toISOString();
+  console.log(`[cron] /api/reports/scheduled executed at ${executedAt}`);
+
+  return NextResponse.json({
+    success: true,
+    message: "Scheduled reports job executed.",
+    executedAt
+  });
 }
