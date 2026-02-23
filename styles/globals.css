@@ -5,8 +5,8 @@
 :root {
   color-scheme: dark;
   --px-bg: linear-gradient(160deg, #0b0f14 0%, #0f172a 45%, #0b0f14 100%);
-  --px-surface: rgba(15, 23, 42, 0.62);
-  --px-surface-soft: rgba(15, 23, 42, 0.48);
+  --px-surface: rgba(15, 23, 42, 0.95);
+  --px-surface-soft: rgba(2, 6, 23, 0.92);
   --px-border: rgba(148, 163, 184, 0.2);
   --px-text: #f8fafc;
   --px-muted: #94a3b8;
@@ -24,14 +24,23 @@
 
 html,
 body {
+  height: 100%;
   min-height: 100%;
+  margin: 0;
+  padding: 0;
+  background: #0b0f1a;
+}
+
+#__next {
+  min-height: 100%;
+  background: radial-gradient(circle at 20% 20%, #0f172a, #020617 70%);
 }
 
 body {
-  margin: 0;
   font-family: "Inter", "Space Grotesk", "Segoe UI", sans-serif;
   color: var(--px-text);
   background: var(--px-bg);
+  overscroll-behavior: none;
 }
 
 @layer base {
@@ -81,7 +90,40 @@ h6 {
   color: #ecfeff;
 }
 
+main,
+section,
+div {
+  background-clip: padding-box;
+}
+
 @layer components {
+  .app-root {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: radial-gradient(circle at 20% 20%, #0f172a, #020617 70%);
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+  }
+
+  .app-root::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.08), transparent 60%);
+  }
+
+  .scroll {
+    min-height: 100%;
+    background: inherit;
+  }
+
+  .card {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.95));
+    backdrop-filter: blur(12px);
+  }
+
   .px-shell {
     @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
   }
