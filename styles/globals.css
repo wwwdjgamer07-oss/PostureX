@@ -29,7 +29,9 @@ body {
   background: #06080f;
   color: #eaf2ff;
   min-height: 100%;
-  overscroll-behavior: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
 }
 
 #__next {
@@ -113,7 +115,8 @@ div {
     min-height: 100dvh;
     background: transparent;
     overflow-x: hidden;
-    overscroll-behavior: contain;
+    overflow-y: visible;
+    overscroll-behavior-y: auto;
   }
 
   .app-root::before {
@@ -841,6 +844,11 @@ html[data-ui-skin="px-elite"] .px-panel {
 @media (max-width: 768px) {
   body {
     background-attachment: scroll;
+    overscroll-behavior-y: none;
+  }
+
+  .app-root {
+    overscroll-behavior-y: contain;
   }
 }
 

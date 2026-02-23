@@ -58,6 +58,7 @@ export function AIChatPanel({
   const [typing, setTyping] = useState(false);
   const [emotion, setEmotion] = useState("neutral");
   const [voiceEnabled, setVoiceEnabled] = useState<boolean>(true);
+  const [micError, setMicError] = useState<string | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
   const lastSpokenMessageRef = useRef<string | null>(null);
@@ -328,7 +329,13 @@ export function AIChatPanel({
 
         <div className="border-t border-slate-500/20 p-3">
           <div className="flex items-center gap-2 rounded-full border border-slate-500/35 bg-slate-900/65 px-3 py-2 backdrop-blur">
-            <MicInput onTranscript={(text) => setInput((prev) => (prev ? `${prev} ${text}` : text))} />
+            <MicInput
+              onTranscript={(text) => {
+                setMicError(null);
+                setInput((prev) => (prev ? `${prev} ${text}` : text));
+              }}
+              onError={(message) => setMicError(message || null)}
+            />
             <input
               value={input}
               onChange={(event) => setInput(event.target.value)}
@@ -351,6 +358,7 @@ export function AIChatPanel({
               <Send className="h-3.5 w-3.5" />
             </button>
           </div>
+          {micError ? <p className="mt-2 text-[11px] text-amber-200/90">{micError}</p> : null}
         </div>
       </div>
     </aside>
