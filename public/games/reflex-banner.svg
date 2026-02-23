@@ -1,0 +1,19 @@
+<svg width="1200" height="675" viewBox="0 0 1200 675" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="675" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#172554"/>
+      <stop offset="1" stop-color="#1e1b4b"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#bg)"/>
+  <circle cx="600" cy="338" r="185" stroke="#818cf8" stroke-opacity="0.6" stroke-width="6"/>
+  <circle cx="600" cy="338" r="125" stroke="#a5b4fc" stroke-opacity="0.8" stroke-width="6"/>
+  <circle cx="600" cy="338" r="65" fill="#22d3ee" fill-opacity="0.33"/>
+  <path d="M600 338L700 275" stroke="#e0e7ff" stroke-width="12" stroke-linecap="round"/>
+  <path d="M600 338L540 420" stroke="#c7d2fe" stroke-width="12" stroke-linecap="round"/>
+  <path d="M600 338L470 290" stroke="#c7d2fe" stroke-width="10" stroke-linecap="round"/>
+  <rect x="950" y="215" width="130" height="70" rx="14" fill="#22d3ee" fill-opacity="0.2" stroke="#67e8f9" stroke-opacity="0.7"/>
+  <text x="983" y="260" fill="#cffafe" font-size="34" font-family="Arial, sans-serif" font-weight="700">GO</text>
+  <text x="90" y="110" fill="#e0e7ff" font-size="64" font-family="Arial, sans-serif" font-weight="700">Reflex</text>
+  <text x="90" y="160" fill="#c7d2fe" font-size="30" font-family="Arial, sans-serif">Fast reactions, precise posture corrections.</text>
+</svg>

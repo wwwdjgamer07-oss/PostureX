@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#020611"/>
+      <stop offset="0.55" stop-color="#051735"/>
+      <stop offset="1" stop-color="#040810"/>
+    </linearGradient>
+    <linearGradient id="line" x1="80" y1="120" x2="1120" y2="540" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#00E5FF"/>
+      <stop offset="1" stop-color="#2962FF"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="1030" cy="90" r="140" fill="#2962FF" fill-opacity="0.25"/>
+  <circle cx="140" cy="560" r="180" fill="#00E5FF" fill-opacity="0.15"/>
+  <rect x="94" y="110" width="1012" height="410" rx="32" fill="#081327" fill-opacity="0.8" stroke="#2962FF" stroke-opacity="0.35" stroke-width="2"/>
+  <path d="M224 428V204h56v180h70V204h56v224H224Z" fill="url(#line)"/>
+  <text x="450" y="270" fill="#E2EAFF" font-family="Arial, sans-serif" font-size="62" font-weight="700">Mr X AI</text>
+  <text x="450" y="340" fill="#9AB3FF" font-family="Arial, sans-serif" font-size="34">Intelligent Posture Intelligence Platform</text>
+  <text x="450" y="410" fill="#9EC8FF" font-family="Arial, sans-serif" font-size="24">Realtime risk scoring • AI coach • Enterprise analytics</text>
+</svg>

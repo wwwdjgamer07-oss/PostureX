@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "mrx-ai-posture-platform",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=18 <23"
+  },
+  "scripts": {
+    "predev": "node scripts/check-node.js",
+    "dev": "node scripts/dev.js",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky install"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.22",
+    "@stripe/stripe-js": "^4.1.0",
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.49.1",
+    "clsx": "^2.1.1",
+    "framer-motion": "^11.15.0",
+    "jspdf": "^2.5.2",
+    "jspdf-autotable": "^3.8.4",
+    "lucide-react": "^0.469.0",
+    "next": "14.2.25",
+    "next-pwa": "^5.6.0",
+    "nodemailer": "^8.0.1",
+    "papaparse": "^5.5.2",
+    "razorpay": "^2.9.6",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "recharts": "^2.15.1",
+    "sonner": "^2.0.7",
+    "stripe": "^17.6.0",
+    "tailwind-merge": "^2.5.2",
+    "zod": "^3.24.2",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/nodemailer": "^7.0.11",
+    "@types/papaparse": "^5.3.16",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "14.2.25",
+    "husky": "^9.1.7",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3"
+  }
+}

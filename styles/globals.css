@@ -1,0 +1,775 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --px-bg: linear-gradient(160deg, #0b0f14 0%, #0f172a 45%, #0b0f14 100%);
+  --px-surface: rgba(15, 23, 42, 0.62);
+  --px-surface-soft: rgba(15, 23, 42, 0.48);
+  --px-border: rgba(148, 163, 184, 0.2);
+  --px-text: #f8fafc;
+  --px-muted: #94a3b8;
+  --px-accent: #22d3ee;
+  --px-accent-strong: #3b82f6;
+  --px-card-radius: 1.5rem;
+  --px-glow: 0 0 40px rgba(34, 211, 238, 0.16);
+  --px-grid-opacity: 0.08;
+  --px-particle-hue: 190deg;
+}
+
+* {
+  border-color: var(--px-border);
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", "Space Grotesk", "Segoe UI", sans-serif;
+  color: var(--px-text);
+  background: var(--px-bg);
+}
+
+@layer base {
+  button {
+    transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+  }
+
+  button:focus-visible {
+    outline: 2px solid rgba(34, 211, 238, 0.75);
+    outline-offset: 2px;
+  }
+
+  button:not(:disabled):active,
+  button[aria-pressed="true"]:not(:disabled) {
+    transform: scale(0.985);
+    filter: brightness(0.94);
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
+html:not(.dark) {
+  color-scheme: light;
+}
+
+html:not(.dark) body {
+  color: #0f172a;
+  background:
+    radial-gradient(80rem 40rem at 10% -10%, rgba(34, 211, 238, 0.18), transparent 60%),
+    linear-gradient(160deg, #eff6ff 0%, #e2e8f0 55%, #dbeafe 100%);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Space Grotesk", "Inter", sans-serif;
+  letter-spacing: -0.02em;
+}
+
+::selection {
+  background: rgba(34, 211, 238, 0.28);
+  color: #ecfeff;
+}
+
+@layer components {
+  .px-shell {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .px-panel {
+    border: 1px solid var(--px-border);
+    border-radius: var(--px-card-radius);
+    background: var(--px-surface);
+    @apply backdrop-blur-xl;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 30px 70px rgba(2, 6, 23, 0.45), var(--px-glow);
+  }
+
+  .px-glow-border {
+    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.28), 0 0 40px rgba(34, 211, 238, 0.16);
+  }
+
+  .px-button {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-cyan-50 transition;
+    border: 1px solid color-mix(in srgb, var(--px-accent), white 30%);
+    background: linear-gradient(140deg, color-mix(in srgb, var(--px-accent-strong), transparent 15%), color-mix(in srgb, var(--px-accent), transparent 10%));
+  }
+
+  .px-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 30px rgba(34, 211, 238, 0.25);
+  }
+
+  .px-button:focus-visible {
+    outline: 2px solid rgba(34, 211, 238, 0.85);
+    outline-offset: 2px;
+  }
+
+  .px-button:active {
+    transform: translateY(1px) scale(0.985);
+    box-shadow: inset 0 3px 12px rgba(2, 6, 23, 0.45), 0 4px 12px rgba(34, 211, 238, 0.2);
+    filter: brightness(0.95);
+  }
+
+  .px-button[aria-pressed="true"] {
+    transform: translateY(1px) scale(0.985);
+    box-shadow: inset 0 3px 12px rgba(2, 6, 23, 0.45), 0 4px 12px rgba(34, 211, 238, 0.2);
+    filter: brightness(0.95);
+  }
+
+  .px-button-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-200 transition;
+    border: 1px solid var(--px-border);
+    background: var(--px-surface-soft);
+  }
+
+  .px-button-ghost:hover {
+    @apply border-cyan-300/50 text-cyan-100;
+    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.2), 0 10px 28px rgba(34, 211, 238, 0.14);
+  }
+
+  .px-button-ghost:focus-visible {
+    outline: 2px solid rgba(34, 211, 238, 0.8);
+    outline-offset: 2px;
+  }
+
+  .px-button-ghost:active {
+    transform: translateY(1px) scale(0.99);
+    box-shadow: inset 0 2px 10px rgba(2, 6, 23, 0.35);
+    filter: brightness(0.95);
+  }
+
+  .px-kpi {
+    border: 1px solid var(--px-border);
+    border-radius: calc(var(--px-card-radius) - 4px);
+    background: var(--px-surface-soft);
+    @apply p-4;
+  }
+
+  .px-grid-pattern {
+    background-image: linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+    background-size: 28px 28px;
+    background-position: center;
+  }
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeSlideRight {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes barGrow {
+  from {
+    transform: scaleY(0.15);
+    opacity: 0.2;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes skeletonPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+@keyframes ambientParticleDrift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.92);
+  }
+  50% {
+    transform: translate3d(var(--drift-x), var(--drift-y), 0) scale(1.08);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(0.94);
+  }
+}
+
+@keyframes ambientCrowX {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(var(--crow-dx), 0, 0);
+  }
+}
+
+@keyframes ambientCrowY {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, calc(var(--crow-dy) * 0.5 + var(--crow-curve)), 0);
+  }
+  100% {
+    transform: translate3d(0, var(--crow-dy), 0);
+  }
+}
+
+@keyframes ambientWingLeft {
+  0%,
+  100% {
+    transform: rotate(11deg);
+  }
+  50% {
+    transform: rotate(-16deg);
+  }
+}
+
+@keyframes ambientWingRight {
+  0%,
+  100% {
+    transform: rotate(-11deg);
+  }
+  50% {
+    transform: rotate(16deg);
+  }
+}
+
+@keyframes pxGameParticleDrift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.95);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translate3d(0, -18px, 0) scale(1.08);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(0.94);
+    opacity: 0.25;
+  }
+}
+
+@keyframes pxGameFlash {
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.48;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0.12;
+  }
+}
+
+@keyframes eyeBlink {
+  0%,
+  45%,
+  100% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  47%,
+  49% {
+    transform: scaleY(0.08);
+    opacity: 0.8;
+  }
+}
+
+.animate-fade-slide {
+  animation: fadeSlideUp 480ms ease-out both;
+}
+
+.animate-fade-slide-right {
+  animation: fadeSlideRight 520ms ease-out both;
+}
+
+.px-reveal {
+  animation: fadeSlideUp 560ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+.px-bar-grow {
+  transform-origin: bottom;
+  animation: barGrow 650ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+.px-hover-lift {
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+}
+
+.px-hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 32px 68px rgba(8, 47, 73, 0.28);
+}
+
+.animate-skeleton-pulse {
+  animation: skeletonPulse 2s ease-in-out infinite;
+}
+
+.ambient-particle-wrap {
+  transform: translate3d(
+    calc(var(--ambient-mx, 0px) * var(--p-depth, 0.2)),
+    calc(var(--ambient-my, 0px) * var(--p-depth, 0.2)),
+    0
+  );
+  will-change: transform;
+}
+
+.ambient-particle {
+  animation-name: ambientParticleDrift;
+  animation-duration: var(--ambient-duration, 28s);
+  animation-delay: var(--ambient-delay, 0s);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  box-shadow:
+    0 0 10px rgba(0, 229, 255, 0.26),
+    0 0 20px rgba(41, 98, 255, 0.18);
+  will-change: transform, opacity;
+}
+
+.ambient-crow-x {
+  animation: ambientCrowX var(--crow-duration, 22s) ease-in-out forwards;
+  will-change: transform;
+}
+
+.ambient-crow-y {
+  animation: ambientCrowY var(--crow-duration, 22s) ease-in-out forwards;
+  will-change: transform;
+}
+
+.ambient-crow-body {
+  filter:
+    drop-shadow(0 0 2px rgba(5, 14, 30, 0.3))
+    drop-shadow(0 0 8px rgba(15, 28, 60, 0.18));
+  will-change: transform;
+}
+
+.ambient-crow-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ambient-crow-wing-left {
+  animation: ambientWingLeft 1.8s ease-in-out infinite;
+}
+
+.ambient-crow-wing-right {
+  animation: ambientWingRight 1.8s ease-in-out infinite;
+}
+
+.px-game-grid {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--px-accent), transparent 88%) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--px-accent), transparent 88%) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
+.px-game-vignette {
+  background:
+    radial-gradient(circle at 50% 15%, rgba(34, 211, 238, 0.16), transparent 42%),
+    radial-gradient(circle at 50% 88%, rgba(37, 99, 235, 0.18), transparent 48%),
+    radial-gradient(circle at 50% 50%, rgba(2, 6, 23, 0), rgba(2, 6, 23, 0.55));
+}
+
+.px-game-particle {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--px-accent), white 20%);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--px-accent), white 35%);
+  animation: pxGameParticleDrift 7.2s ease-in-out infinite;
+}
+
+@keyframes obsidianThemeFade {
+  from { opacity: 0.94; }
+  to { opacity: 1; }
+}
+
+@keyframes obsidianPulse {
+  0%, 100% { box-shadow: 0 0 0 1px #2a0a3a, 0 0 16px rgba(176, 38, 255, 0.28); }
+  50% { box-shadow: 0 0 0 1px #2a0a3a, 0 0 26px rgba(176, 38, 255, 0.42); }
+}
+
+@keyframes obsidianEmberDrift {
+  0% { transform: translate3d(0, 0, 0); opacity: 0.24; }
+  50% { transform: translate3d(10px, -18px, 0); opacity: 0.62; }
+  100% { transform: translate3d(-8px, -38px, 0); opacity: 0.12; }
+}
+
+html[data-px-theme="obsidian_skull"] {
+  --px-bg: linear-gradient(135deg, #0A0A0F 0%, #240046 40%, #0A0A0F 100%);
+  --px-surface: #11111acc;
+  --px-surface-soft: #1a0b2ecc;
+  --px-border: #2A0A3A;
+  --px-text: #f5ebff;
+  --px-muted: #c8a8e8;
+  --px-accent: #B026FF;
+  --px-accent-strong: #7A00FF;
+  --px-glow: 0 0 32px rgba(199, 125, 255, 0.26);
+  --px-grid-opacity: 0.03;
+  --px-particle-hue: 278deg;
+}
+
+html[data-px-theme="obsidian_skull"] body {
+  animation: obsidianThemeFade 300ms ease both;
+  background: var(--px-bg);
+}
+
+html[data-px-theme="obsidian_skull"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.035;
+  background-image:
+    radial-gradient(circle at 25% 20%, rgba(224, 170, 255, 0.2) 0, transparent 26%),
+    radial-gradient(circle at 75% 80%, rgba(176, 38, 255, 0.2) 0, transparent 24%),
+    linear-gradient(rgba(176, 38, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(176, 38, 255, 0.08) 1px, transparent 1px);
+  background-size: 420px 420px, 380px 380px, 28px 28px, 28px 28px;
+  transform: translate3d(calc(var(--ambient-mx, 0px) * 0.05), calc(var(--ambient-my, 0px) * 0.05), 0);
+}
+
+html[data-px-theme="obsidian_skull"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    radial-gradient(5px 5px at 14% 72%, rgba(199, 125, 255, 0.45), transparent 65%),
+    radial-gradient(4px 4px at 48% 64%, rgba(176, 38, 255, 0.4), transparent 65%),
+    radial-gradient(3px 3px at 82% 78%, rgba(122, 0, 255, 0.4), transparent 65%);
+  animation: obsidianEmberDrift 16s linear infinite;
+}
+
+html[data-px-theme="obsidian_skull"] .px-panel,
+html[data-px-theme="obsidian_skull"] .px-kpi,
+html[data-px-theme="obsidian_skull"] .px-navbar,
+html[data-px-theme="obsidian_skull"] .px-dashboard-sidebar,
+html[data-px-theme="obsidian_skull"] .px-ai-chat-panel,
+html[data-px-theme="obsidian_skull"] .px-global-chat-panel,
+html[data-px-theme="obsidian_skull"] .px-play-shell .px-panel,
+html[data-px-theme="obsidian_skull"] .px-reward-popup-card,
+html[data-px-theme="obsidian_skull"] input,
+html[data-px-theme="obsidian_skull"] textarea,
+html[data-px-theme="obsidian_skull"] select {
+  border: 1px solid #2A0A3A !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 20px 58px rgba(8, 0, 14, 0.46), 0 0 22px rgba(176, 38, 255, 0.2);
+}
+
+html[data-px-theme="obsidian_skull"] .px-navbar {
+  background: linear-gradient(145deg, rgba(17, 17, 26, 0.95), rgba(26, 11, 46, 0.9));
+}
+
+html[data-px-theme="obsidian_skull"] .px-button {
+  border-color: #B026FF;
+  background: linear-gradient(135deg, #7A00FF, #B026FF);
+  color: #fff;
+  transition: transform 220ms ease, box-shadow 220ms ease, filter 220ms ease;
+}
+
+html[data-px-theme="obsidian_skull"] .px-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 12px #B026FF88, 0 18px 34px rgba(122, 0, 255, 0.32);
+}
+
+html[data-px-theme="obsidian_skull"] .px-button-ghost {
+  color: #d5b3ef;
+  border-color: #B026FF;
+  background: rgba(176, 38, 255, 0.08);
+}
+
+html[data-px-theme="obsidian_skull"] .px-button-ghost:hover {
+  color: #f2e7ff;
+  box-shadow: 0 0 12px #B026FF88;
+}
+
+html[data-px-theme="obsidian_skull"] .px-store-obsidian-card {
+  position: relative;
+  overflow: hidden;
+  animation: obsidianPulse 2.6s ease-in-out infinite;
+}
+
+html[data-px-theme="obsidian_skull"] .px-store-obsidian-card::after {
+  content: "SKULL";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  font-size: 34px;
+  letter-spacing: 0.06em;
+  color: rgba(224, 170, 255, 0.08);
+  pointer-events: none;
+}
+
+html[data-px-theme="obsidian_skull"] .obsidian-unlock-button:active {
+  animation: obsidianThemeFade 180ms ease, obsidianPulse 380ms ease;
+}
+
+html[data-px-theme="obsidian_skull"] .px-reward-popup-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 40%, rgba(176, 38, 255, 0.2), transparent 55%);
+  pointer-events: none;
+}
+
+html[data-px-theme="obsidian_skull"] .px-reward-popup-card .absolute.rounded-full {
+  background-color: rgba(199, 125, 255, 0.9) !important;
+  box-shadow: 0 0 10px rgba(176, 38, 255, 0.45);
+}
+
+html[data-px-theme="obsidian_skull"] .px-global-chat-panel,
+html[data-px-theme="obsidian_skull"] .px-ai-chat-panel {
+  background: linear-gradient(145deg, rgba(17, 17, 26, 0.92), rgba(36, 0, 70, 0.72));
+}
+
+html[data-px-theme="obsidian_skull"] .px-global-chat-panel::after,
+html[data-px-theme="obsidian_skull"] .px-ai-chat-panel::after {
+  content: "SKULL";
+  position: absolute;
+  right: 14px;
+  bottom: 10px;
+  font-size: 24px;
+  letter-spacing: 0.08em;
+  color: rgba(224, 170, 255, 0.09);
+  pointer-events: none;
+}
+
+html[data-px-theme="obsidian_skull"] .px-chat-bubble-user {
+  background: #1A0B2E !important;
+  border-color: #2A0A3A !important;
+  color: #f5ebff !important;
+}
+
+html[data-px-theme="obsidian_skull"] .px-chat-bubble-ai {
+  background: #240046 !important;
+  border-color: #B026FF !important;
+  color: #f5ebff !important;
+  box-shadow: 0 0 12px #B026FF66 !important;
+}
+
+html[data-px-theme="obsidian_skull"] .px-global-chat-trigger,
+html[data-px-theme="obsidian_skull"] .px-ai-chat-panel header span.grid {
+  box-shadow: 0 0 14px #B026FF88 !important;
+  border-color: #B026FF !important;
+}
+
+html[data-px-theme="obsidian_skull"] .px-global-chat-panel .bg-cyan-200,
+html[data-px-theme="obsidian_skull"] .px-ai-chat-panel .bg-cyan-200 {
+  background: #c77dff !important;
+}
+
+html[data-px-theme="obsidian_skull"] .px-global-chat-panel .text-cyan-100,
+html[data-px-theme="obsidian_skull"] .px-ai-chat-panel .text-cyan-100,
+html[data-px-theme="obsidian_skull"] .px-global-chat-panel .text-cyan-50,
+html[data-px-theme="obsidian_skull"] .px-ai-chat-panel .text-cyan-50 {
+  color: #f2e7ff !important;
+}
+
+html[data-px-theme="obsidian_skull"] .px-panel,
+html[data-px-theme="obsidian_skull"] .px-kpi,
+html[data-px-theme="obsidian_skull"] .px-button,
+html[data-px-theme="obsidian_skull"] .px-button-ghost,
+html[data-px-theme="obsidian_skull"] .px-store-item {
+  transition: background 300ms ease, border-color 300ms ease, box-shadow 300ms ease, color 300ms ease;
+}
+
+html[data-px-theme="obsidian_skull"] .px-kpi:hover,
+html[data-px-theme="obsidian_skull"] .px-hover-lift:hover {
+  box-shadow: 0 0 18px rgba(176, 38, 255, 0.34), 0 24px 46px rgba(10, 10, 15, 0.42);
+}
+
+html[data-px-theme="obsidian_skull"] .px-bar-grow {
+  box-shadow: 0 0 14px rgba(176, 38, 255, 0.35);
+}
+
+html[data-px-theme="obsidian_skull"] .px-hero-shell {
+  border-color: #2A0A3A !important;
+  background: linear-gradient(145deg, #0a0a0f, #1a0b2e) !important;
+}
+
+html[data-px-theme="obsidian_skull"] .px-hero-inner {
+  border-color: #2A0A3A !important;
+  background: linear-gradient(160deg, #0A0A0F 0%, #240046 48%, #0A0A0F 100%) !important;
+  box-shadow: inset 0 0 0 1px rgba(176, 38, 255, 0.12), 0 0 30px rgba(176, 38, 255, 0.14);
+}
+
+html[data-px-theme="obsidian_skull"] .px-hero-floating-card {
+  border-color: #2A0A3A !important;
+  background: linear-gradient(145deg, rgba(17, 17, 26, 0.94), rgba(36, 0, 70, 0.84)) !important;
+  box-shadow: 0 12px 34px rgba(10, 10, 15, 0.5), 0 0 14px rgba(176, 38, 255, 0.2);
+}
+
+html[data-px-theme="obsidian_skull"] .px-hero-floating-icon {
+  border-color: #B026FF !important;
+  background: rgba(176, 38, 255, 0.16) !important;
+  color: #E0AAFF !important;
+}
+
+html[data-px-theme="obsidian_skull"] .px-hero-floating-progress {
+  background: rgba(42, 10, 58, 0.75) !important;
+}
+
+html[data-px-theme="obsidian_skull"] .px-hero-floating-progress-bar {
+  background: linear-gradient(to right, transparent, #C77DFF, transparent) !important;
+}
+
+html[data-px-theme="obsidian_skull"] .px-hero-chip {
+  border-color: #B026FF !important;
+  background: rgba(176, 38, 255, 0.12) !important;
+  color: #E0AAFF !important;
+}
+
+html[data-px-theme="obsidian_skull"] .px-hero-cta-primary {
+  border-color: #B026FF !important;
+  background: linear-gradient(135deg, #7A00FF, #B026FF) !important;
+  color: #fff !important;
+  box-shadow: 0 0 20px rgba(176, 38, 255, 0.28) !important;
+}
+
+html[data-px-theme="obsidian_skull"] .px-hero-cta-secondary {
+  border-color: #2A0A3A !important;
+  background: rgba(176, 38, 255, 0.08) !important;
+  color: #E0AAFF !important;
+}
+
+html[data-px-theme="obsidian_skull"] .px-hero-blob {
+  background: linear-gradient(
+    to bottom,
+    rgba(176, 38, 255, 0.46),
+    rgba(122, 0, 255, 0.34),
+    rgba(36, 0, 70, 0.2)
+  ) !important;
+}
+
+html[data-px-theme="obsidian_skull"] .px-theme-control {
+  border-color: #B026FF !important;
+  background: rgba(176, 38, 255, 0.1) !important;
+  color: #E0AAFF !important;
+  box-shadow: 0 0 12px rgba(176, 38, 255, 0.22);
+}
+
+html[data-px-theme="obsidian_skull"] .px-theme-control:hover {
+  border-color: #C77DFF !important;
+  background: rgba(176, 38, 255, 0.16) !important;
+}
+
+html[data-px-theme="obsidian_skull"] .px-theme-notification-badge {
+  border-color: #E0AAFF55 !important;
+  background: linear-gradient(135deg, #7A00FF, #B026FF) !important;
+}
+
+html[data-px-theme="obsidian_skull"] .px-brand-logo-skull {
+  border-color: #B026FF !important;
+  background: linear-gradient(145deg, rgba(122, 0, 255, 0.22), rgba(176, 38, 255, 0.16)) !important;
+  box-shadow: 0 0 14px rgba(176, 38, 255, 0.35), inset 0 0 0 1px rgba(224, 170, 255, 0.2);
+}
+
+html[data-px-theme="obsidian_skull"] .px-brand-logo {
+  box-shadow: 0 0 18px rgba(176, 38, 255, 0.3);
+}
+
+html[data-ui-skin="neon-outline"] .px-panel {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--px-accent), transparent 55%), var(--px-glow);
+}
+
+html[data-ui-skin="rounded-pro"] .px-panel,
+html[data-ui-skin="rounded-pro"] .px-kpi {
+  border-radius: 2rem;
+}
+
+html[data-ui-skin="holo-panels"] .px-panel {
+  background: linear-gradient(120deg, color-mix(in srgb, var(--px-surface), transparent 5%), color-mix(in srgb, var(--px-accent), transparent 86%));
+}
+
+html[data-ui-skin="frosted-blur"] .px-panel {
+  backdrop-filter: blur(20px) saturate(115%);
+}
+
+html[data-ui-skin="minimal-flat"] .px-panel,
+html[data-ui-skin="minimal-flat"] .px-kpi {
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+html[data-ui-skin="cyber-frame"] .px-panel {
+  border-style: dashed;
+}
+
+html[data-ui-skin="px-elite"] .px-panel {
+  box-shadow: inset 0 0 0 1px rgba(250, 204, 21, 0.35), 0 20px 58px rgba(250, 204, 21, 0.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html:not(.dark) .px-panel {
+  border-color: rgba(148, 163, 184, 0.3);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 22px 48px rgba(37, 99, 235, 0.12);
+}
+
+html:not(.dark) .px-kpi {
+  border-color: rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+html:not(.dark) .px-button-ghost {
+  border-color: rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.72);
+  color: #1e293b;
+}
+
+html:not(.dark) .px-button-ghost:hover {
+  border-color: rgba(14, 165, 233, 0.5);
+  color: #0f172a;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.2), 0 12px 28px rgba(37, 99, 235, 0.12);
+}

@@ -1,0 +1,18 @@
+<svg width="1200" height="675" viewBox="0 0 1200 675" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="675" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#164e63"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#bg)"/>
+  <rect x="150" y="470" width="900" height="22" rx="11" fill="#22d3ee" fill-opacity="0.35"/>
+  <circle cx="600" cy="360" r="80" fill="#22d3ee" fill-opacity="0.22"/>
+  <rect x="555" y="190" width="90" height="150" rx="45" fill="#67e8f9" fill-opacity="0.6"/>
+  <line x1="600" y1="340" x2="540" y2="430" stroke="#cffafe" stroke-width="18" stroke-linecap="round"/>
+  <line x1="600" y1="340" x2="660" y2="430" stroke="#cffafe" stroke-width="18" stroke-linecap="round"/>
+  <line x1="555" y1="255" x2="500" y2="315" stroke="#a5f3fc" stroke-width="16" stroke-linecap="round"/>
+  <line x1="645" y1="255" x2="700" y2="315" stroke="#a5f3fc" stroke-width="16" stroke-linecap="round"/>
+  <text x="90" y="110" fill="#e0f2fe" font-size="64" font-family="Arial, sans-serif" font-weight="700">Balance Beam</text>
+  <text x="90" y="160" fill="#bae6fd" font-size="30" font-family="Arial, sans-serif">Steady posture. Cleaner alignment.</text>
+</svg>
