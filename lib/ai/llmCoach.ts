@@ -126,21 +126,32 @@ export async function generateLLMCoachResponse(input: LLMCoachInput): Promise<LL
     }
   };
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
+  async function callGeminiOnce(timeoutMs: number) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/${modelPath}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        }
+      );
+      return response;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/${modelPath}:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal
-      }
-    );
+    let response = await callGeminiOnce(15000);
+    if (!response.ok && response.status >= 500) {
+      response = await callGeminiOnce(15000);
+    }
 
     if (!response.ok) {
       return { provider: "none", text: null, reason: `gemini_http_${response.status}` };
@@ -160,10 +171,21 @@ export async function generateLLMCoachResponse(input: LLMCoachInput): Promise<LL
     return { provider: "none", text: null, reason: "gemini_empty_response" };
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
+      try {
+        const retry = await callGeminiOnce(15000);
+        if (!retry.ok) {
+          return { provider: "none", text: null, reason: `gemini_http_${retry.status}` };
+        }
+        const retryData = (await retry.json()) as GeminiGenerateContentResponse;
+        const retryText = extractGeminiText(retryData);
+        if (retryText) {
+          return { provider: "gemini", text: sanitizeSpeech(retryText) };
+        }
+      } catch {
+        // Fall through to timeout reason.
+      }
       return { provider: "none", text: null, reason: "gemini_timeout" };
     }
     return { provider: "none", text: null, reason: "gemini_exception" };
-  } finally {
-    clearTimeout(timeout);
   }
 }
