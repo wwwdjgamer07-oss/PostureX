@@ -90,7 +90,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return apiOk({ orderId: order.id });
+    return apiOk({ orderId: order.id, keyId });
   } catch (error) {
     const message =
       error && typeof error === "object" && "description" in error

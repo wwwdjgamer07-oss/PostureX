@@ -268,14 +268,6 @@ export function PricingIndiaClient({ currentPlan, userId }: PricingIndiaClientPr
       return;
     }
 
-    const key = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-    if (!key) {
-      const err = "Razorpay key is missing. Set NEXT_PUBLIC_RAZORPAY_KEY_ID.";
-      setError(err);
-      toast.error(err);
-      return;
-    }
-
     setProcessingPlan(plan);
     setError(null);
     setMessage(null);
@@ -294,9 +286,13 @@ export function PricingIndiaClient({ currentPlan, userId }: PricingIndiaClientPr
         })
       });
 
-      const orderPayload = (await orderResponse.json()) as { orderId?: string; error?: string };
+      const orderPayload = (await orderResponse.json()) as { orderId?: string; keyId?: string; error?: string };
       if (!orderResponse.ok || !orderPayload.orderId) {
         throw new Error(orderPayload.error || "Failed to create payment order.");
+      }
+      const key = orderPayload.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+      if (!key) {
+        throw new Error("Razorpay key is missing. Set RAZORPAY_KEY_ID on server or NEXT_PUBLIC_RAZORPAY_KEY_ID.");
       }
 
       const razorpayLoaded = await loadRazorpayScript();

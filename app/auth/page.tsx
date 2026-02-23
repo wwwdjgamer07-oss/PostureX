@@ -249,29 +249,29 @@ export default function AuthPage() {
   return (
     <main className="flex min-h-[calc(100dvh-5rem)] w-full items-center py-6 sm:py-12">
       <div className="mx-auto w-[94vw] max-w-none pb-[env(safe-area-inset-bottom)] sm:max-w-md">
-        <div className="w-full rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_0_40px_rgba(0,200,255,0.15)] backdrop-blur-xl sm:p-8">
+        <div className="w-full rounded-2xl border border-slate-200/70 bg-white/80 p-5 shadow-[0_0_40px_rgba(0,200,255,0.15)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 sm:p-8">
           <header className="mb-4 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-300/40 bg-cyan-400/10 text-sm font-semibold text-cyan-100">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-300/60 bg-cyan-400/15 text-sm font-semibold text-cyan-700 dark:border-cyan-300/40 dark:bg-cyan-400/10 dark:text-cyan-100">
               PX
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-slate-100 sm:text-2xl">PostureX Auth</h1>
-              <p className="text-sm text-slate-300">Sign in or create your account.</p>
+              <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100 sm:text-2xl">PostureX Auth</h1>
+              <p className="text-sm text-slate-600 dark:text-slate-300">Sign in or create your account.</p>
             </div>
           </header>
 
           <div className="flex flex-col gap-5">
-            <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-white/5 p-1">
+            <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200/70 bg-slate-100/70 p-1 dark:border-white/10 dark:bg-white/5">
               <button
                 type="button"
-                className={`h-11 rounded-lg text-sm font-semibold transition ${mode === "signin" ? "bg-gradient-to-r from-blue-500 to-cyan-400 text-white" : "text-slate-300"}`}
+                className={`h-11 rounded-lg text-sm font-semibold transition ${mode === "signin" ? "bg-gradient-to-r from-blue-500 to-cyan-400 text-white" : "text-slate-600 dark:text-slate-300"}`}
                 onClick={() => setMode("signin")}
               >
                 Sign In
               </button>
               <button
                 type="button"
-                className={`h-11 rounded-lg text-sm font-semibold transition ${mode === "signup" ? "bg-gradient-to-r from-blue-500 to-cyan-400 text-white" : "text-slate-300"}`}
+                className={`h-11 rounded-lg text-sm font-semibold transition ${mode === "signup" ? "bg-gradient-to-r from-blue-500 to-cyan-400 text-white" : "text-slate-600 dark:text-slate-300"}`}
                 onClick={() => setMode("signup")}
               >
                 Sign Up
@@ -281,7 +281,7 @@ export default function AuthPage() {
             <form className="grid gap-3" onSubmit={handleEmailAuth}>
               {mode === "signup" ? (
                 <input
-                  className="h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-base text-slate-100 outline-none focus:ring-2 focus:ring-cyan-400/40"
+                  className="h-12 w-full rounded-xl border border-slate-200/80 bg-white/90 px-4 text-base text-slate-900 outline-none focus:ring-2 focus:ring-cyan-400/40 placeholder:text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:placeholder:text-slate-400"
                   placeholder="Full Name"
                   value={fullName}
                   onChange={(event) => setFullName(event.target.value)}
@@ -291,7 +291,7 @@ export default function AuthPage() {
 
               <input
                 type="email"
-                className="h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-base text-slate-100 outline-none focus:ring-2 focus:ring-cyan-400/40"
+                className="h-12 w-full rounded-xl border border-slate-200/80 bg-white/90 px-4 text-base text-slate-900 outline-none focus:ring-2 focus:ring-cyan-400/40 placeholder:text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:placeholder:text-slate-400"
                 placeholder="Email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
@@ -299,7 +299,7 @@ export default function AuthPage() {
               />
               <input
                 type="password"
-                className="h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-base text-slate-100 outline-none focus:ring-2 focus:ring-cyan-400/40"
+                className="h-12 w-full rounded-xl border border-slate-200/80 bg-white/90 px-4 text-base text-slate-900 outline-none focus:ring-2 focus:ring-cyan-400/40 placeholder:text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:placeholder:text-slate-400"
                 placeholder="Password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -322,14 +322,14 @@ export default function AuthPage() {
                     void handleForgotPassword();
                   }}
                   disabled={loading}
-                  className="h-11 w-full rounded-xl border border-white/10 bg-white/5 text-base font-semibold text-slate-100 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="h-11 w-full rounded-xl border border-slate-200/80 bg-white/85 text-base font-semibold text-slate-800 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:hover:bg-white/10"
                 >
                   Forgot password
                 </button>
               ) : null}
             </form>
 
-            <div className="h-px bg-white/10" />
+            <div className="h-px bg-slate-200 dark:bg-white/10" />
 
             <button
               type="button"
@@ -337,7 +337,7 @@ export default function AuthPage() {
               onClick={() => {
                 void handleGoogleOAuth();
               }}
-              className="h-11 w-full rounded-xl border border-white/10 bg-white/5 text-base font-semibold text-slate-100 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-11 w-full rounded-xl border border-slate-200/80 bg-white/85 text-base font-semibold text-slate-800 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:hover:bg-white/10"
             >
               Continue with Google
             </button>
@@ -349,14 +349,14 @@ export default function AuthPage() {
                 onClick={() => {
                   void handleResendConfirmation();
                 }}
-                className="h-11 w-full rounded-xl border border-white/10 bg-white/5 text-base font-semibold text-slate-100 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                className="h-11 w-full rounded-xl border border-slate-200/80 bg-white/85 text-base font-semibold text-slate-800 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:hover:bg-white/10"
               >
                 {resending ? "Sending..." : "Resend verification email"}
               </button>
             ) : null}
 
-            {message ? <p className="text-sm text-cyan-200">{message}</p> : null}
-            {error ? <p className="text-sm text-red-300">{error}</p> : null}
+            {message ? <p className="text-sm text-cyan-700 dark:text-cyan-200">{message}</p> : null}
+            {error ? <p className="text-sm text-red-600 dark:text-red-300">{error}</p> : null}
           </div>
         </div>
       </div>
