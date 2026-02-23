@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Activity, PlayCircle, Square } from "lucide-react";
+import { AlertTriangle, Activity, PlayCircle } from "lucide-react";
 import { BreakReminder } from "@/components/BreakReminder";
 import { PostureAlert } from "@/components/PostureAlert";
 import { createClient } from "@/lib/supabase/client";
@@ -26,6 +26,7 @@ import type { PostureFrame } from "@/lib/posture/types";
 import { SensorPostureEngine, type SensorPostureFrame } from "@/lib/posture/sensorPosture";
 import type { CameraPermissionStatus } from "@/components/CameraSession";
 import type { PostureMetrics } from "@/lib/postureEngine";
+import { detectMobile, hasMobileSensorSupport, requestSensorPermission } from "@/lib/mobileSensor";
 import { toast } from "sonner";
 
 interface SensorSessionProps {
@@ -37,6 +38,8 @@ interface SensorSessionProps {
   onPostureFrame?: (frame: PostureFrame) => void;
   onSessionIdChange?: (sessionId: string | null) => void;
   onCoachEvent?: (event: CoachEvent) => void;
+  autoStart?: boolean;
+  onAutoStartFailed?: () => void;
 }
 
 type SensorAlertType = "forward_head" | "slouch" | "shoulder" | "stability";
@@ -63,7 +66,9 @@ export function SensorSession({
   onSensorFrame,
   onPostureFrame,
   onSessionIdChange,
-  onCoachEvent
+  onCoachEvent,
+  autoStart = false,
+  onAutoStartFailed
 }: SensorSessionProps) {
   const engineRef = useRef<SensorPostureEngine | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -100,6 +105,7 @@ export function SensorSession({
   const [activeBreakRecommendation, setActiveBreakRecommendation] = useState<BreakRecommendation | null>(null);
   const [breakCountdownSeconds, setBreakCountdownSeconds] = useState<number | null>(null);
   const [fallbackActive, setFallbackActive] = useState(false);
+  const [autoStartAttempted, setAutoStartAttempted] = useState(false);
 
   const buttonLabel = useMemo(() => {
     if (loading) return "Initializing...";
@@ -113,6 +119,43 @@ export function SensorSession({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const canAutoStart = autoStart && detectMobile() && hasMobileSensorSupport();
+    if (!canAutoStart || autoStartAttempted || runningRef.current || loading) return;
+
+    let cancelled = false;
+    const runAutoStart = async () => {
+      setAutoStartAttempted(true);
+      const savedActive = window.localStorage.getItem("px_session_active");
+      if (savedActive !== "1") {
+        const granted = await requestSensorPermission();
+        if (!granted) {
+          if (!cancelled) {
+            onAutoStartFailed?.();
+          }
+          return;
+        }
+      }
+
+      if (cancelled) return;
+      await startSession();
+      if (!cancelled && runningRef.current) {
+        window.localStorage.setItem("px_session_active", "1");
+      }
+      if (!cancelled && !runningRef.current) {
+        onAutoStartFailed?.();
+      }
+    };
+
+    void runAutoStart();
+    return () => {
+      cancelled = true;
+    };
+    // startSession intentionally excluded to avoid recreating the auto-start cycle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart, autoStartAttempted, loading, onAutoStartFailed]);
 
   function startTimer() {
     if (timerRef.current) {
@@ -349,6 +392,9 @@ export function SensorSession({
       startedAtRef.current = Date.now();
       runningRef.current = true;
       setRunning(true);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("px_session_active", "1");
+      }
       onPermissionChange("granted");
       setLoading(false);
       startTimer();
@@ -376,6 +422,9 @@ export function SensorSession({
     startedAtRef.current = null;
     sessionIdRef.current = null;
     onSessionIdChange?.(null);
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("px_session_active");
+    }
     setRunning(false);
     setActiveAlert(null);
     setActiveBreakRecommendation(null);
@@ -389,6 +438,12 @@ export function SensorSession({
         <div className="flex items-center gap-2 text-slate-700 dark:text-slate-100">
           <Activity className="h-4 w-4 text-cyan-300" />
           <p className="text-sm font-medium">Sensor Tracking</p>
+          {running ? (
+            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/45 bg-emerald-400/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-200">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" />
+              Sensor Mode
+            </span>
+          ) : null}
         </div>
         <p className="rounded-full border border-slate-300/50 bg-white/75 px-3 py-1 text-xs text-slate-700 dark:border-slate-500/30 dark:bg-slate-900/70 dark:text-slate-300">{elapsed}s</p>
       </div>
@@ -427,7 +482,11 @@ export function SensorSession({
 
       <button
         type="button"
-        className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cyan-300/45 bg-gradient-to-r from-blue-500 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:shadow-[0_12px_28px_rgba(34,211,238,0.25)] disabled:cursor-not-allowed disabled:opacity-60"
+        className={`mt-4 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${
+          running
+            ? "border border-emerald-400/45 bg-emerald-500/20 text-emerald-100"
+            : "border border-cyan-300/45 bg-gradient-to-r from-blue-500 to-cyan-500 hover:shadow-[0_12px_28px_rgba(34,211,238,0.25)]"
+        }`}
         onClick={() => {
           if (running) {
             stopSession(true);
@@ -437,10 +496,9 @@ export function SensorSession({
         }}
         disabled={loading}
       >
-        {running ? <Square className="h-4 w-4" /> : <PlayCircle className="h-4 w-4" />}
-        {buttonLabel}
+        {running ? <Activity className="h-4 w-4" /> : <PlayCircle className="h-4 w-4" />}
+        {running ? "Sensor Active • Tracking" : buttonLabel}
       </button>
     </div>
   );
 }
-

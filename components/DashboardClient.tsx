@@ -7,13 +7,16 @@ import { SkullAvatarIcon, SkullBrainIcon, SkullCoinIcon, SkullGemIcon, SkullGrid
 import { DailyScoreCard } from "@/components/DailyScoreCard";
 import { PostureRiskCard } from "@/components/PostureRiskCard";
 import { PdfReportButton } from "@/components/PdfReportButton";
+import { SensorReportCard } from "@/components/SensorReportCard";
 import { WeeklyPostureTrendChart } from "@/components/WeeklyPostureTrendChart";
 import { XPBar } from "@/components/games/XPBar";
 import { BADGE_DEFINITIONS } from "@/lib/games/badges";
 import { createDefaultRewardProgress, readRewardProgress, type RewardProgressState } from "@/lib/games/rewards";
+import { detectMobile, hasMobileSensorSupport } from "@/lib/mobileSensor";
 import { usePersonalizationProfile } from "@/lib/personalization/profileClient";
 import { resolveLevel } from "@/lib/games/xpSystem";
 import { useIsObsidianSkullTheme } from "@/lib/personalization/usePxTheme";
+import { readDailyReport, SENSOR_ACTIVE_KEY, SensorPostureEngine, type SensorDailyReport } from "@/lib/sensorPostureEngine";
 import type { PlanTier } from "@/lib/types";
 
 interface SessionRecord {
@@ -111,6 +114,9 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
       ? (initialDashboardLayout.hiddenWidgets.filter((item): item is string => typeof item === "string") as string[])
       : []
   }));
+  const [sensorModeActive, setSensorModeActive] = useState(false);
+  const [dailySensorReport, setDailySensorReport] = useState<SensorDailyReport | null>(null);
+  const [yesterdaySensorReport, setYesterdaySensorReport] = useState<SensorDailyReport | null>(null);
 
   useEffect(() => {
     const syncRewards = () => setRewardProgress(readRewardProgress());
@@ -118,6 +124,36 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
     window.addEventListener("focus", syncRewards);
     return () => {
       window.removeEventListener("focus", syncRewards);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const engine = new SensorPostureEngine((_state, report) => {
+      setDailySensorReport(report);
+    });
+    const date = new Date();
+    const todayKey = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
+    const yesterday = new Date(date);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayKey = `${yesterday.getFullYear()}${String(yesterday.getMonth() + 1).padStart(2, "0")}${String(yesterday.getDate()).padStart(2, "0")}`;
+    setDailySensorReport(readDailyReport(todayKey));
+    setYesterdaySensorReport(readDailyReport(yesterdayKey));
+
+    const bootstrap = async () => {
+      const mobile = detectMobile();
+      const hasSensor = hasMobileSensorSupport();
+      if (!mobile || !hasSensor) return;
+      const saved = window.localStorage.getItem(SENSOR_ACTIVE_KEY);
+      const started = await engine.start();
+      if (started || saved === "1") {
+        setSensorModeActive(true);
+      }
+    };
+    void bootstrap();
+
+    return () => {
+      engine.stop();
     };
   }, []);
 
@@ -192,6 +228,12 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
           <p className="text-xs uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-300">PostureX Command Center</p>
           <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">Performance Dashboard</h1>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Live readiness, posture risk, and trend analytics for every session.</p>
+          {sensorModeActive ? (
+            <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-emerald-300/45 bg-emerald-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-200">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" />
+              Sensor Mode Active
+            </div>
+          ) : null}
           <div className="mt-4 flex flex-wrap gap-3">
             <Link href="/session" className="px-button">Start Session</Link>
             <Link href="/ai-playground" className="px-button-ghost">AI Playground</Link>
@@ -262,6 +304,7 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
 
         {activeTab === "overview" ? (
           <>
+        <SensorReportCard report={dailySensorReport} yesterdayReport={yesterdaySensorReport} active={sensorModeActive} />
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {isVisible("dailyScore") ? <DailyScoreCard
             score={initialDailyProgress.todayScore}

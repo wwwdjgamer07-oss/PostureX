@@ -274,6 +274,27 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+function useIsTouchDevice() {
+  const [isTouch, setIsTouch] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(pointer: coarse)");
+    const update = () => {
+      setIsTouch(media.matches || navigator.maxTouchPoints > 0);
+    };
+    update();
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", update);
+      return () => media.removeEventListener("change", update);
+    }
+    media.addListener(update);
+    return () => media.removeListener(update);
+  }, []);
+
+  return isTouch;
+}
+
 function useAnimationFrame(loop: (dt: number) => void, enabled: boolean) {
   const rafRef = useRef<number | null>(null);
   const prevRef = useRef<number>(0);
@@ -343,25 +364,25 @@ function GameFrame({
   }, [levelUpLevel]);
 
   return (
-    <section className={`relative overflow-hidden rounded-[2rem] border p-5 shadow-[0_24px_70px_rgba(2,8,23,0.35)] ${skin.frameClass}`}>
+    <section className={`relative overflow-hidden rounded-2xl border p-2.5 sm:rounded-[2rem] sm:p-5 shadow-[0_24px_70px_rgba(2,8,23,0.35)] ${skin.frameClass}`}>
       {!isRetroLander ? <div className="pointer-events-none absolute inset-0 px-game-grid opacity-30" /> : null}
       {!isRetroLander ? <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${themeMeta[theme].frame}`} /> : null}
-      <div className="relative z-10 space-y-4">
+      <div className="relative z-10 space-y-2.5 sm:space-y-4">
         {!isRetroLander ? (
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]">{title}</h2>
-            <p className="text-xs uppercase tracking-[0.18em] text-white/80">{themeMeta[theme].label}</p>
+            <h2 className="text-xl font-semibold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)] sm:text-2xl">{title}</h2>
+            <p className="hidden text-xs uppercase tracking-[0.18em] text-white/80 sm:block">{themeMeta[theme].label}</p>
           </div>
         ) : null}
 
-        <div className={`grid gap-4 ${isRetroLander ? "xl:grid-cols-1" : "xl:grid-cols-[1fr_250px]"}`}>
+        <div className={`grid gap-3 sm:gap-4 ${isRetroLander ? "xl:grid-cols-1" : "xl:grid-cols-[1fr_250px]"}`}>
           <div className="flex items-center justify-center">
-            <div className={`relative border p-2 shadow-[0_16px_34px_rgba(0,0,0,0.28)] ${isRetroLander ? "rounded-sm" : "rounded-[1.4rem]"} ${skin.surfaceClass}`}>
+            <div className={`relative border p-1 sm:p-2 shadow-[0_16px_34px_rgba(0,0,0,0.28)] ${isRetroLander ? "rounded-sm" : "rounded-[1rem] sm:rounded-[1.4rem]"} ${skin.surfaceClass}`}>
               {children}
             </div>
           </div>
 
-          <aside className={`rounded-2xl border p-4 text-white ${skin.hudClass} ${isRetroLander ? "hidden" : ""}`}>
+          <aside className={`rounded-2xl border p-4 text-white ${skin.hudClass} ${isRetroLander ? "hidden" : "hidden xl:block"}`}>
             <p className="text-xs uppercase tracking-[0.14em] text-white/80">Arcade Stats</p>
             <div className="mt-3 space-y-2 text-sm">
               <p>Score: <span className="font-semibold">{stats.score}</span></p>
@@ -385,21 +406,21 @@ function GameFrame({
         ) : null}
 
         {!isRetroLander ? (
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <button type="button" onClick={onRestart} className="px-button">Restart</button>
-            <button type="button" onClick={onExit} className="px-button-ghost">Exit</button>
-            <button type="button" onClick={onTutorial} className="px-button-ghost">Tutorial</button>
-            <button type="button" onClick={onFullscreen} className="px-button-ghost">Fullscreen</button>
-            <span className="rounded-lg border border-cyan-300/35 bg-cyan-400/10 px-3 py-2 text-xs uppercase tracking-[0.12em] text-cyan-100">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-center sm:gap-3">
+            <button type="button" onClick={onRestart} className="px-button w-full sm:w-auto">Restart</button>
+            <button type="button" onClick={onExit} className="px-button-ghost w-full sm:w-auto">Exit</button>
+            <button type="button" onClick={onTutorial} className="px-button-ghost hidden w-full sm:w-auto sm:inline-flex">Tutorial</button>
+            <button type="button" onClick={onFullscreen} className="px-button-ghost hidden w-full sm:w-auto sm:inline-flex">Fullscreen</button>
+            <span className="col-span-2 rounded-lg border border-cyan-300/35 bg-cyan-400/10 px-3 py-2 text-center text-xs uppercase tracking-[0.12em] text-cyan-100 sm:col-span-1">
               Theme: {themeMeta[theme].label}
             </span>
           </div>
         ) : (
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <button type="button" onClick={onRestart} className="px-button-ghost">Restart</button>
-            <button type="button" onClick={onExit} className="px-button-ghost">Exit</button>
-            <button type="button" onClick={onTutorial} className="px-button-ghost">Tutorial</button>
-            <button type="button" onClick={onFullscreen} className="px-button-ghost">Fullscreen</button>
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-center sm:gap-3">
+            <button type="button" onClick={onRestart} className="px-button-ghost w-full sm:w-auto">Restart</button>
+            <button type="button" onClick={onExit} className="px-button-ghost w-full sm:w-auto">Exit</button>
+            <button type="button" onClick={onTutorial} className="px-button-ghost hidden w-full sm:w-auto sm:inline-flex">Tutorial</button>
+            <button type="button" onClick={onFullscreen} className="px-button-ghost hidden w-full sm:w-auto sm:inline-flex">Fullscreen</button>
             {footerExtras}
           </div>
         )}
@@ -459,6 +480,7 @@ function SnakeGame({
   theme: ArcadeTheme;
   snakeSkin: SnakeSkin;
 }) {
+  const isTouch = useIsTouchDevice();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stats, setStats] = useState<ArcadeStats>({ score: 0, level: 1, lives: 1, over: false });
   const dirRef = useRef({ x: 1, y: 0 });
@@ -471,9 +493,17 @@ function SnakeGame({
   const foodRef = useRef({ x: 14, y: 8 });
   const tickRef = useRef(0);
   const foodPulseRef = useRef(0);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [eatPopup, setEatPopup] = useState<{ x: number; y: number; id: number } | null>(null);
   const hasMovedRef = useRef(false);
   const cell = 16;
+
+  const setDirection = useCallback((x: number, y: number) => {
+    const current = dirRef.current;
+    if (current.x === -x && current.y === -y) return;
+    nextDirRef.current = { x, y };
+    hasMovedRef.current = true;
+  }, []);
 
   const palette =
     snakeSkin === "ember"
@@ -504,25 +534,21 @@ function SnakeGame({
     const onKey = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
       if (key === "arrowup" || key === "w") {
-        nextDirRef.current = { x: 0, y: -1 };
-        hasMovedRef.current = true;
+        setDirection(0, -1);
       }
       if (key === "arrowdown" || key === "s") {
-        nextDirRef.current = { x: 0, y: 1 };
-        hasMovedRef.current = true;
+        setDirection(0, 1);
       }
       if (key === "arrowleft" || key === "a") {
-        nextDirRef.current = { x: -1, y: 0 };
-        hasMovedRef.current = true;
+        setDirection(-1, 0);
       }
       if (key === "arrowright" || key === "d") {
-        nextDirRef.current = { x: 1, y: 0 };
-        hasMovedRef.current = true;
+        setDirection(1, 0);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [setDirection]);
 
   useAnimationFrame(
     (dt) => {
@@ -685,7 +711,49 @@ function SnakeGame({
     enabled
   );
 
-  return { stats, setStats, reset, canvas: <canvas ref={canvasRef} width={384} height={384} className="rounded-xl" /> };
+  return {
+    stats,
+    setStats,
+    reset,
+    canvas: (
+      <div className="mx-auto w-full max-w-[96vw] space-y-3">
+        <canvas
+          ref={canvasRef}
+          width={384}
+          height={384}
+          className="mx-auto h-[56vh] max-h-[620px] w-auto max-w-[96vw] rounded-xl touch-none"
+          onTouchStart={(event) => {
+            const touch = event.touches[0];
+            if (!touch) return;
+            touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+          }}
+          onTouchEnd={(event) => {
+            const touch = event.changedTouches[0];
+            const start = touchStartRef.current;
+            if (!touch || !start) return;
+            const dx = touch.clientX - start.x;
+            const dy = touch.clientY - start.y;
+            if (Math.abs(dx) < 16 && Math.abs(dy) < 16) return;
+            if (Math.abs(dx) > Math.abs(dy)) {
+              setDirection(dx > 0 ? 1 : -1, 0);
+            } else {
+              setDirection(0, dy > 0 ? 1 : -1);
+            }
+          }}
+        />
+        {isTouch ? (
+          <div className="mx-auto grid w-[240px] grid-cols-3 gap-2">
+            <span />
+            <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-3 text-cyan-100" onClick={() => setDirection(0, -1)}>Up</button>
+            <span />
+            <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-3 text-cyan-100" onClick={() => setDirection(-1, 0)}>Left</button>
+            <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-3 text-cyan-100" onClick={() => setDirection(0, 1)}>Down</button>
+            <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-3 text-cyan-100" onClick={() => setDirection(1, 0)}>Right</button>
+          </div>
+        ) : null}
+      </div>
+    )
+  };
 }
 
 function LanderGame({
@@ -699,6 +767,7 @@ function LanderGame({
   timeScale: number;
   loopMode: boolean;
 }) {
+  const isTouch = useIsTouchDevice();
   const LANDER_RULES = {
     maxVerticalSpeed: 22,
     maxHorizontalSpeed: 14,
@@ -776,16 +845,20 @@ function LanderGame({
     cameraXRef.current = clamp(shipRef.current.x - width / 2, 0, Math.max(0, worldWidth - width));
   };
 
+  const setControl = useCallback((key: "left" | "right" | "up", pressed: boolean) => {
+    keysRef.current[key] = pressed;
+  }, []);
+
   useEffect(() => {
     const kd = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft" || e.key.toLowerCase() === "a") keysRef.current.left = true;
-      if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") keysRef.current.right = true;
-      if (e.key === "ArrowUp" || e.key.toLowerCase() === "w" || e.key === " ") keysRef.current.up = true;
+      if (e.key === "ArrowLeft" || e.key.toLowerCase() === "a") setControl("left", true);
+      if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") setControl("right", true);
+      if (e.key === "ArrowUp" || e.key.toLowerCase() === "w" || e.key === " ") setControl("up", true);
     };
     const ku = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft" || e.key.toLowerCase() === "a") keysRef.current.left = false;
-      if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") keysRef.current.right = false;
-      if (e.key === "ArrowUp" || e.key.toLowerCase() === "w" || e.key === " ") keysRef.current.up = false;
+      if (e.key === "ArrowLeft" || e.key.toLowerCase() === "a") setControl("left", false);
+      if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") setControl("right", false);
+      if (e.key === "ArrowUp" || e.key.toLowerCase() === "w" || e.key === " ") setControl("up", false);
     };
     window.addEventListener("keydown", kd);
     window.addEventListener("keyup", ku);
@@ -793,7 +866,7 @@ function LanderGame({
       window.removeEventListener("keydown", kd);
       window.removeEventListener("keyup", ku);
     };
-  }, []);
+  }, [setControl]);
 
   useAnimationFrame(
     (dt) => {
@@ -987,7 +1060,51 @@ function LanderGame({
     stats,
     setStats,
     reset,
-    canvas: <canvas ref={canvasRef} width={width} height={height} className="h-auto w-[min(96vw,1400px)] rounded-none" />
+    canvas: (
+      <div className="w-full space-y-3">
+        <canvas ref={canvasRef} width={width} height={height} className="mx-auto h-[50vh] max-h-[620px] w-auto max-w-[98vw] rounded-none touch-none" />
+        {isTouch ? (
+          <div className="mx-auto grid w-full max-w-md grid-cols-3 gap-2">
+            <button
+              type="button"
+              className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-3 text-cyan-100"
+              onTouchStart={() => setControl("left", true)}
+              onTouchEnd={() => setControl("left", false)}
+              onTouchCancel={() => setControl("left", false)}
+              onMouseDown={() => setControl("left", true)}
+              onMouseUp={() => setControl("left", false)}
+              onMouseLeave={() => setControl("left", false)}
+            >
+              Rotate Left
+            </button>
+            <button
+              type="button"
+              className="rounded-lg border border-cyan-300/40 bg-cyan-500/20 py-3 text-cyan-100"
+              onTouchStart={() => setControl("up", true)}
+              onTouchEnd={() => setControl("up", false)}
+              onTouchCancel={() => setControl("up", false)}
+              onMouseDown={() => setControl("up", true)}
+              onMouseUp={() => setControl("up", false)}
+              onMouseLeave={() => setControl("up", false)}
+            >
+              Thrust
+            </button>
+            <button
+              type="button"
+              className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-3 text-cyan-100"
+              onTouchStart={() => setControl("right", true)}
+              onTouchEnd={() => setControl("right", false)}
+              onTouchCancel={() => setControl("right", false)}
+              onMouseDown={() => setControl("right", true)}
+              onMouseUp={() => setControl("right", false)}
+              onMouseLeave={() => setControl("right", false)}
+            >
+              Rotate Right
+            </button>
+          </div>
+        ) : null}
+      </div>
+    )
   };
 }
 
@@ -1002,6 +1119,7 @@ function XOGame({
   xoTheme: XOTheme;
   theme: ArcadeTheme;
 }) {
+  const isTouch = useIsTouchDevice();
   const [variantId, setVariantId] = useState<VariantId>("classic");
   const variant = useMemo(() => XO_VARIANTS.find((v) => v.id === variantId) ?? XO_VARIANTS[0], [variantId]);
   const [selectedWildMark, setSelectedWildMark] = useState<Mark>("X");
@@ -1286,7 +1404,17 @@ function XOGame({
     setStatusText(`AI level ${stats.level} adapting...`);
   };
 
-  const cellSize = variant.size <= 3 ? 94 : variant.size === 4 ? 72 : 58;
+  const cellSize = isTouch
+    ? variant.size <= 3
+      ? 104
+      : variant.size === 4
+        ? 80
+        : 64
+    : variant.size <= 3
+      ? 94
+      : variant.size === 4
+        ? 72
+        : 58;
   const boardWidth = variant.size * cellSize + (variant.size - 1) * 8 + 18;
 
   const toneAccent = theme === "toxic" ? "lime" : theme === "sunset" ? "amber" : "cyan";
@@ -1352,7 +1480,7 @@ function XOGame({
   })();
 
   const view = (
-    <div className="space-y-3 p-2">
+    <div className="space-y-3 p-2 sm:p-2.5">
       <div className="flex flex-wrap items-center gap-2">
         {XO_VARIANTS.map((v) => (
           <button
@@ -1388,7 +1516,8 @@ function XOGame({
 
       <p className="text-xs uppercase tracking-[0.08em] text-cyan-100/80">{statusText}</p>
 
-      <div className={`relative rounded-xl border p-2 ${boardClass}`} style={{ width: boardWidth }}>
+      <div className="overflow-x-auto">
+      <div className={`relative mx-auto rounded-xl border p-2 ${boardClass}`} style={{ width: boardWidth, maxWidth: "96vw" }}>
         <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${variant.size}, minmax(0, 1fr))` }}>
           {board.map((cell, idx) => (
             <button
@@ -1403,6 +1532,7 @@ function XOGame({
           ))}
         </div>
         {lineOverlay}
+      </div>
       </div>
     </div>
   );
@@ -1421,6 +1551,7 @@ function PongGame({
   paddleSkin: PongSkin;
   theme: ArcadeTheme;
 }) {
+  const isTouch = useIsTouchDevice();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stats, setStats] = useState<ArcadeStats>({ score: 0, level: 1, lives: 3, over: false });
   const playerY = useRef(160);
@@ -1441,16 +1572,20 @@ function PongGame({
     setShake(0);
   }, []);
 
+  const movePaddleFromClientY = useCallback((clientY: number) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const y = clientY - rect.top;
+    playerY.current = clamp(y - 30, 0, 340);
+  }, []);
+
   useEffect(() => {
     const move = (e: MouseEvent) => {
-      const rect = canvasRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const y = e.clientY - rect.top;
-      playerY.current = clamp(y - 30, 0, 340);
+      movePaddleFromClientY(e.clientY);
     };
     window.addEventListener("mousemove", move);
     return () => window.removeEventListener("mousemove", move);
-  }, []);
+  }, [movePaddleFromClientY]);
 
   useEffect(() => {
     if (enabled && !lastEnabledRef.current) {
@@ -1563,10 +1698,43 @@ function PongGame({
     enabled
   );
 
-  return { stats, setStats, reset, view: <canvas ref={canvasRef} width={400} height={400} className="rounded-xl" /> };
+  return {
+    stats,
+    setStats,
+    reset,
+    view: (
+      <div className="mx-auto w-full max-w-[96vw] space-y-3">
+        <canvas
+          ref={canvasRef}
+          width={400}
+          height={400}
+          className="mx-auto h-[56vh] max-h-[620px] w-auto max-w-[96vw] rounded-xl touch-none"
+          onTouchStart={(event) => {
+            const touch = event.touches[0];
+            if (!touch) return;
+            event.preventDefault();
+            movePaddleFromClientY(touch.clientY);
+          }}
+          onTouchMove={(event) => {
+            const touch = event.touches[0];
+            if (!touch) return;
+            event.preventDefault();
+            movePaddleFromClientY(touch.clientY);
+          }}
+        />
+        {isTouch ? (
+          <div className="mx-auto grid w-full max-w-[260px] grid-cols-2 gap-2">
+            <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-2 text-cyan-100" onClick={() => { playerY.current = clamp(playerY.current - 28, 0, 340); }}>Up</button>
+            <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-2 text-cyan-100" onClick={() => { playerY.current = clamp(playerY.current + 28, 0, 340); }}>Down</button>
+          </div>
+        ) : null}
+      </div>
+    )
+  };
 }
 
 function BreakoutGame({ onFinish, enabled }: { onFinish: (score: number, won: boolean) => void; enabled: boolean }) {
+  const isTouch = useIsTouchDevice();
   type Brick = { x: number; y: number; w: number; h: number; alive: boolean; hp: number; maxHp: number; color: string; score: number };
   const WIDTH = 400;
   const HEIGHT = 480;
@@ -1619,6 +1787,12 @@ function BreakoutGame({ onFinish, enabled }: { onFinish: (score: number, won: bo
     spawnLevel(1);
   }, [spawnLevel]);
 
+  const movePaddleFromClientX = useCallback((clientX: number) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    paddleX.current = clamp(clientX - rect.left - paddleW.current / 2, LEFT_WALL + 2, RIGHT_WALL - paddleW.current - 2);
+  }, [LEFT_WALL, RIGHT_WALL]);
+
   useEffect(() => {
     if (enabled && !lastEnabledRef.current) {
       reset();
@@ -1628,13 +1802,11 @@ function BreakoutGame({ onFinish, enabled }: { onFinish: (score: number, won: bo
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
-      const rect = canvasRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      paddleX.current = clamp(e.clientX - rect.left - paddleW.current / 2, LEFT_WALL + 2, RIGHT_WALL - paddleW.current - 2);
+      movePaddleFromClientX(e.clientX);
     };
     window.addEventListener("mousemove", move);
     return () => window.removeEventListener("mousemove", move);
-  }, [LEFT_WALL, RIGHT_WALL]);
+  }, [movePaddleFromClientX]);
 
   useAnimationFrame(
     (dt) => {
@@ -1755,7 +1927,39 @@ function BreakoutGame({ onFinish, enabled }: { onFinish: (score: number, won: bo
     enabled
   );
 
-  return { stats, setStats, reset, view: <canvas ref={canvasRef} width={WIDTH} height={HEIGHT} className="rounded-xl" /> };
+  return {
+    stats,
+    setStats,
+    reset,
+    view: (
+      <div className="mx-auto w-full max-w-[96vw] space-y-3">
+        <canvas
+          ref={canvasRef}
+          width={WIDTH}
+          height={HEIGHT}
+          className="mx-auto h-[56vh] max-h-[620px] w-auto max-w-[96vw] rounded-xl touch-none"
+          onTouchStart={(event) => {
+            const touch = event.touches[0];
+            if (!touch) return;
+            event.preventDefault();
+            movePaddleFromClientX(touch.clientX);
+          }}
+          onTouchMove={(event) => {
+            const touch = event.touches[0];
+            if (!touch) return;
+            event.preventDefault();
+            movePaddleFromClientX(touch.clientX);
+          }}
+        />
+        {isTouch ? (
+          <div className="mx-auto grid w-full max-w-[260px] grid-cols-2 gap-2">
+            <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-2 text-cyan-100" onClick={() => { paddleX.current = clamp(paddleX.current - 26, LEFT_WALL + 2, RIGHT_WALL - paddleW.current - 2); }}>Left</button>
+            <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-2 text-cyan-100" onClick={() => { paddleX.current = clamp(paddleX.current + 26, LEFT_WALL + 2, RIGHT_WALL - paddleW.current - 2); }}>Right</button>
+          </div>
+        ) : null}
+      </div>
+    )
+  };
 }
 
 function MemoryGame({
@@ -1841,13 +2045,13 @@ function MemoryGame({
   const closedToken = cardBack === "glyph" ? "◇" : cardBack === "prism" ? "◈" : "?";
 
   const view = (
-    <div className="relative grid grid-cols-4 gap-2 p-2">
+    <div className="relative grid grid-cols-4 gap-2 p-2 sm:p-3">
       {cards.map((card, idx) => (
         <button
           type="button"
           key={card.id}
           onClick={() => flip(idx)}
-          className={`grid h-20 w-20 place-items-center rounded-xl border text-sm font-semibold transition ${
+          className={`grid h-[21vw] max-h-[96px] min-h-[72px] w-[21vw] max-w-[96px] min-w-[72px] place-items-center rounded-xl border text-sm font-semibold transition ${
             card.open || card.matched
               ? "border-cyan-300/55 bg-cyan-400/15 text-cyan-100 shadow-[0_0_12px_rgba(34,211,238,0.35)]"
               : closedClass
@@ -2290,8 +2494,8 @@ export function PXPlayClient() {
   };
 
   return (
-    <div className="px-play-shell px-shell space-y-6 pb-12">
-      <section className="px-panel p-6 sm:p-8">
+    <div className={`px-play-shell px-shell ${current ? "space-y-2 pb-3" : "space-y-6 pb-12"}`}>
+      {!current ? <section className="px-panel p-6 sm:p-8">
         <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-cyan-300">
           {isObsidianSkull ? <SkullJoystickIcon className="h-4 w-4" /> : <Gamepad2 className="h-4 w-4" />}
           PX Play Arcade
@@ -2334,7 +2538,7 @@ export function PXPlayClient() {
           ))}
           </div>
         </div>
-      </section>
+      </section> : null}
 
       {viewMode === "rewards" ? (
         <section className="grid gap-4 lg:grid-cols-3">
@@ -2405,7 +2609,7 @@ export function PXPlayClient() {
           </article>
         </section>
       ) : current ? (
-        <div ref={gameFrameRef} className="px-game-full-target w-full">
+        <div ref={gameFrameRef} className="px-game-full-target w-full min-h-[88dvh] sm:min-h-0">
           <GameFrame
             title={current.title}
             stats={current.stats}
@@ -2570,7 +2774,7 @@ export function PXPlayClient() {
 
       {tutorialGame ? (
         <div className="fixed inset-0 z-[60] grid place-items-center bg-slate-950/80 backdrop-blur-[2px]">
-          <div className="w-full max-w-2xl rounded-2xl border border-cyan-300/40 bg-slate-900/95 p-6 shadow-[0_0_80px_rgba(34,211,238,0.2)]">
+          <div className="h-full w-full overflow-y-auto rounded-none border border-cyan-300/40 bg-slate-900/95 p-4 shadow-[0_0_80px_rgba(34,211,238,0.2)] sm:h-auto sm:max-h-none sm:w-full sm:max-w-2xl sm:rounded-2xl sm:p-6">
             <p className="text-xs uppercase tracking-[0.18em] text-cyan-200">First Round Tutorial</p>
             <h3 className="mt-2 text-2xl font-semibold text-white">
               {tutorialGame === "snake" ? "Snake Rules" : tutorialGame === "lander" ? "Lunar Lander Rules" : tutorialGame === "xo" ? "Tic-Tac-Toe Rules" : tutorialGame === "pong" ? "Pong Rules" : tutorialGame === "memory" ? "Memory Match Rules" : "Breakout Rules"}
@@ -2587,7 +2791,7 @@ export function PXPlayClient() {
                 <>
                   <p>Controls: Left/Right rotate, Up/Space thrust.</p>
                   <p>Land only on the flat pad.</p>
-                  <p>Safe landing requires: Vertical speed ≤ 22, Horizontal speed ≤ 14, Tilt ≤ 15 degrees.</p>
+                  <p>Safe landing requires: Vertical speed &lt;= 22, Horizontal speed &lt;= 14, Tilt &lt;= 15 degrees.</p>
                   <div className="mt-3 rounded-xl border border-cyan-300/35 bg-slate-950/60 p-3">
                     <p className="text-xs uppercase tracking-[0.12em] text-cyan-200">Advanced Prompt Library</p>
                     <div className="mt-2 max-h-60 space-y-2 overflow-auto pr-1">
@@ -2617,7 +2821,7 @@ export function PXPlayClient() {
               ) : null}
               {tutorialGame === "pong" ? (
                 <>
-                  <p>Move mouse to control your paddle.</p>
+                  <p>Move mouse or drag on screen to control your paddle.</p>
                   <p>Bounce the ball past the AI to score.</p>
                   <p>Do not miss the ball or you lose lives.</p>
                 </>
@@ -2631,15 +2835,15 @@ export function PXPlayClient() {
               ) : null}
               {tutorialGame === "breakout" ? (
                 <>
-                  <p>Move mouse to control paddle.</p>
+                  <p>Move mouse or drag on screen to control paddle.</p>
                   <p>Break all bricks to win.</p>
                   <p>Don&apos;t let the ball fall below the paddle.</p>
                 </>
               ) : null}
             </div>
-            <div className="mt-6 flex gap-3">
-              <button type="button" onClick={completeTutorial} className="px-button">Start Round</button>
-              <button type="button" onClick={() => setTutorialGame(null)} className="px-button-ghost">Close</button>
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:flex">
+              <button type="button" onClick={completeTutorial} className="px-button w-full">Start Round</button>
+              <button type="button" onClick={() => setTutorialGame(null)} className="px-button-ghost w-full">Close</button>
             </div>
           </div>
         </div>
@@ -2677,10 +2881,12 @@ export function PXPlayClient() {
         }
       `}</style>
 
-      <div className="flex gap-3">
-        <Link href="/ai-playground" className="px-button-ghost inline-flex">Back to AI Playground</Link>
-        <Link href="/dashboard" className="px-button-ghost inline-flex">Back to Dashboard</Link>
-      </div>
+      {!current ? (
+        <div className="flex flex-wrap gap-3">
+          <Link href="/ai-playground" className="px-button-ghost inline-flex">Back to AI Playground</Link>
+          <Link href="/dashboard" className="px-button-ghost inline-flex">Back to Dashboard</Link>
+        </div>
+      ) : null}
     </div>
   );
 }

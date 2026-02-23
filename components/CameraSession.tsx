@@ -94,6 +94,7 @@ export function CameraSession({
   const [landmarks, setLandmarks] = useState<PoseLandmark[]>([]);
   const [elapsed, setElapsed] = useState(0);
   const [fallbackActive, setFallbackActive] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
   const [activeAlert, setActiveAlert] = useState<{
     type: PostureAlertType;
     message: string;
@@ -210,6 +211,65 @@ export function CameraSession({
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+  }
+
+  async function requestCameraStream() {
+    const attempts: MediaStreamConstraints[] = [
+      {
+        video: {
+          facingMode: { ideal: "user" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      },
+      {
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      },
+      { video: true, audio: false }
+    ];
+
+    let lastError: unknown = null;
+    for (const constraints of attempts) {
+      try {
+        return await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (errorValue) {
+        lastError = errorValue;
+      }
+    }
+
+    throw lastError ?? new Error("Unable to open camera stream.");
+  }
+
+  async function waitForVideoReady(video: HTMLVideoElement) {
+    if (video.readyState >= 2) return;
+    await new Promise<void>((resolve, reject) => {
+      const onLoaded = () => {
+        cleanup();
+        resolve();
+      };
+      const onError = () => {
+        cleanup();
+        reject(new Error("Video stream failed to initialize."));
+      };
+      const timer = setTimeout(() => {
+        cleanup();
+        reject(new Error("Camera stream timed out while initializing."));
+      }, 6000);
+      const cleanup = () => {
+        clearTimeout(timer);
+        video.removeEventListener("loadedmetadata", onLoaded);
+        video.removeEventListener("canplay", onLoaded);
+        video.removeEventListener("error", onError);
+      };
+      video.addEventListener("loadedmetadata", onLoaded, { once: true });
+      video.addEventListener("canplay", onLoaded, { once: true });
+      video.addEventListener("error", onError, { once: true });
+    });
   }
 
   async function logBreak(taken: boolean) {
@@ -368,6 +428,7 @@ export function CameraSession({
   async function startSession() {
     setLoading(true);
     setError(null);
+    setVideoReady(false);
 
     let stage = "initialization";
     const permission = await readPermissionState();
@@ -386,10 +447,7 @@ export function CameraSession({
       }
 
       stage = "camera device access";
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false
-      });
+      const mediaStream = await requestCameraStream();
 
       streamRef.current = mediaStream;
 
@@ -399,7 +457,12 @@ export function CameraSession({
 
       stage = "video stream attach";
       videoRef.current.srcObject = mediaStream;
+      videoRef.current.muted = true;
+      videoRef.current.defaultMuted = true;
+      videoRef.current.volume = 0;
+      await waitForVideoReady(videoRef.current);
       await videoRef.current.play();
+      setVideoReady(true);
 
       stage = "AI model initialization";
       const engine = new PostureEngine();
@@ -460,6 +523,7 @@ export function CameraSession({
       setError(`Failed at ${stage}. ${message}`);
       setLoading(false);
       setRunning(false);
+      setVideoReady(false);
       runningRef.current = false;
 
       if (streamRef.current) {
@@ -510,6 +574,7 @@ export function CameraSession({
 
     startedAtRef.current = null;
     setRunning(false);
+    setVideoReady(false);
     setLandmarks([]);
     setFallbackActive(false);
     setActiveAlert(null);
@@ -526,8 +591,8 @@ export function CameraSession({
   }
 
   return (
-    <div className="px-panel w-full overflow-hidden p-4 sm:p-5">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="px-panel w-full overflow-hidden p-3 sm:p-5">
+      <div className="mb-3 flex items-center justify-between sm:mb-4">
         <div className="flex items-center gap-2 text-slate-700 dark:text-slate-100">
           <Video className="h-4 w-4 text-cyan-300" />
           <p className="text-sm font-medium">Live Camera</p>
@@ -535,8 +600,22 @@ export function CameraSession({
         <p className="rounded-full border border-slate-300/50 bg-white/75 px-3 py-1 text-xs text-slate-700 dark:border-slate-500/30 dark:bg-slate-900/70 dark:text-slate-300">{elapsed}s</p>
       </div>
 
-      <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-cyan-300/25 bg-slate-950">
-        <video ref={videoRef} className="h-full w-full object-cover" muted playsInline />
+      <div className="relative h-[62vh] min-h-[340px] max-h-[74vh] w-full overflow-hidden rounded-2xl border border-cyan-300/25 bg-slate-950 sm:h-auto sm:min-h-0 sm:max-h-none sm:aspect-video">
+        <video ref={videoRef} className="h-full w-full object-cover" muted playsInline autoPlay />
+        {!running ? (
+          <div className="pointer-events-none absolute inset-0 grid place-items-center px-4 text-center">
+            <div className="rounded-xl border border-slate-300/35 bg-slate-900/65 px-4 py-2 text-xs text-slate-200">
+              {error?.toLowerCase().includes("permission")
+                ? "Camera permission is blocked. Enable it in browser settings, then retry."
+                : "Tap Start Session to enable live camera preview."}
+            </div>
+          </div>
+        ) : null}
+        {running && !videoReady ? (
+          <div className="pointer-events-none absolute inset-0 grid place-items-center bg-slate-950/35 text-xs text-slate-200">
+            Connecting camera...
+          </div>
+        ) : null}
         <LandmarkOverlay landmarks={landmarks} />
         <PostureAlert active={Boolean(activeAlert?.active)} type={activeAlert?.type ?? null} message={activeAlert?.message ?? null} />
         {running ? <CoachingBubble feedback={coachingFeedback} tips={coachingTips} /> : null}
@@ -564,7 +643,7 @@ export function CameraSession({
 
       <button
         type="button"
-        className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cyan-300/45 bg-gradient-to-r from-blue-500 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:shadow-[0_12px_28px_rgba(34,211,238,0.25)] disabled:cursor-not-allowed disabled:opacity-60"
+        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/45 bg-gradient-to-r from-blue-500 to-cyan-500 px-4 py-3 text-base font-semibold text-white transition hover:shadow-[0_12px_28px_rgba(34,211,238,0.25)] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-4 sm:py-2.5 sm:text-sm"
         onClick={() => {
           if (running) {
             stopSession(true);

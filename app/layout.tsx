@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import dynamic from "next/dynamic";
 import { AuthHashRouter } from "@/components/AuthHashRouter";
 import DevServiceWorkerReset from "@/components/DevServiceWorkerReset";
@@ -49,6 +49,12 @@ export const metadata: Metadata = {
     description: "AI posture intelligence & PX Play arcade",
     images: ["/og-image.svg"]
   }
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover"
 };
 
 export default function RootLayout({

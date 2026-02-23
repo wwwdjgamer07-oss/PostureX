@@ -247,109 +247,118 @@ export default function AuthPage() {
   }
 
   return (
-    <main className="px-shell flex min-h-[80vh] w-full max-w-md items-center py-10">
-      <div className="px-panel w-full p-6">
-        <h1 className="mb-1 text-2xl font-semibold text-slate-900 dark:text-white">PostureX Auth</h1>
-        <p className="mb-6 text-sm text-slate-600 dark:text-slate-300">
-          Sign in or create your account.
-        </p>
+    <main className="flex min-h-[calc(100dvh-5rem)] w-full items-center py-6 sm:py-12">
+      <div className="mx-auto w-[94vw] max-w-none pb-[env(safe-area-inset-bottom)] sm:max-w-md">
+        <div className="w-full rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_0_40px_rgba(0,200,255,0.15)] backdrop-blur-xl sm:p-8">
+          <header className="mb-4 flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-300/40 bg-cyan-400/10 text-sm font-semibold text-cyan-100">
+              PX
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold text-slate-100 sm:text-2xl">PostureX Auth</h1>
+              <p className="text-sm text-slate-300">Sign in or create your account.</p>
+            </div>
+          </header>
 
-        <div className="mb-5 grid grid-cols-2 gap-2 rounded-lg border border-white/20 bg-white/40 p-1 dark:bg-slate-800/50">
-          <button
-            type="button"
-            className={`rounded-md px-3 py-2 text-sm ${mode === "signin" ? "bg-sky-600 text-white" : "text-slate-700 dark:text-slate-200"}`}
-            onClick={() => setMode("signin")}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            className={`rounded-md px-3 py-2 text-sm ${mode === "signup" ? "bg-sky-600 text-white" : "text-slate-700 dark:text-slate-200"}`}
-            onClick={() => setMode("signup")}
-          >
-            Sign Up
-          </button>
-        </div>
+          <div className="flex flex-col gap-5">
+            <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-white/5 p-1">
+              <button
+                type="button"
+                className={`h-11 rounded-lg text-sm font-semibold transition ${mode === "signin" ? "bg-gradient-to-r from-blue-500 to-cyan-400 text-white" : "text-slate-300"}`}
+                onClick={() => setMode("signin")}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                className={`h-11 rounded-lg text-sm font-semibold transition ${mode === "signup" ? "bg-gradient-to-r from-blue-500 to-cyan-400 text-white" : "text-slate-300"}`}
+                onClick={() => setMode("signup")}
+              >
+                Sign Up
+              </button>
+            </div>
 
-        <form className="space-y-3" onSubmit={handleEmailAuth}>
-          {mode === "signup" ? (
-            <input
-              className="w-full rounded-xl border border-white/20 bg-white/60 px-3 py-2 text-sm text-slate-900 outline-none ring-sky-400 focus:ring dark:bg-slate-800/60 dark:text-slate-100"
-              placeholder="Full Name"
-              value={fullName}
-              onChange={(event) => setFullName(event.target.value)}
-              required
-            />
-          ) : null}
+            <form className="grid gap-3" onSubmit={handleEmailAuth}>
+              {mode === "signup" ? (
+                <input
+                  className="h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-base text-slate-100 outline-none focus:ring-2 focus:ring-cyan-400/40"
+                  placeholder="Full Name"
+                  value={fullName}
+                  onChange={(event) => setFullName(event.target.value)}
+                  required
+                />
+              ) : null}
 
-          <input
-            type="email"
-            className="w-full rounded-xl border border-white/20 bg-white/60 px-3 py-2 text-sm text-slate-900 outline-none ring-sky-400 focus:ring dark:bg-slate-800/60 dark:text-slate-100"
-            placeholder="Email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-          />
-          <input
-            type="password"
-            className="w-full rounded-xl border border-white/20 bg-white/60 px-3 py-2 text-sm text-slate-900 outline-none ring-sky-400 focus:ring dark:bg-slate-800/60 dark:text-slate-100"
-            placeholder="Password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-            minLength={6}
-          />
+              <input
+                type="email"
+                className="h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-base text-slate-100 outline-none focus:ring-2 focus:ring-cyan-400/40"
+                placeholder="Email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
+              <input
+                type="password"
+                className="h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-base text-slate-100 outline-none focus:ring-2 focus:ring-cyan-400/40"
+                placeholder="Password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+                minLength={6}
+              />
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading ? "Processing..." : mode === "signin" ? "Sign In" : "Create Account"}
-          </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="h-12 w-full rounded-xl bg-gradient-to-r from-blue-500 to-cyan-400 text-base font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? "Processing..." : mode === "signin" ? "Sign In" : "Create Account"}
+              </button>
 
-          {mode === "signin" ? (
+              {mode === "signin" ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleForgotPassword();
+                  }}
+                  disabled={loading}
+                  className="h-11 w-full rounded-xl border border-white/10 bg-white/5 text-base font-semibold text-slate-100 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Forgot password
+                </button>
+              ) : null}
+            </form>
+
+            <div className="h-px bg-white/10" />
+
             <button
               type="button"
-              onClick={() => {
-                void handleForgotPassword();
-              }}
               disabled={loading}
-              className="w-full rounded-xl border border-white/20 bg-white/60 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-white/80 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-800/60 dark:text-slate-100"
+              onClick={() => {
+                void handleGoogleOAuth();
+              }}
+              className="h-11 w-full rounded-xl border border-white/10 bg-white/5 text-base font-semibold text-slate-100 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Forgot password
+              Continue with Google
             </button>
-          ) : null}
-        </form>
 
-        <div className="my-4 h-px bg-slate-300/55 dark:bg-white/20" />
+            {error?.toLowerCase().includes("verification link expired") ? (
+              <button
+                type="button"
+                disabled={resending || loading}
+                onClick={() => {
+                  void handleResendConfirmation();
+                }}
+                className="h-11 w-full rounded-xl border border-white/10 bg-white/5 text-base font-semibold text-slate-100 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {resending ? "Sending..." : "Resend verification email"}
+              </button>
+            ) : null}
 
-        <button
-          type="button"
-          disabled={loading}
-          onClick={() => {
-            void handleGoogleOAuth();
-          }}
-          className="w-full rounded-xl border border-white/20 bg-white/60 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-white/80 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-800/60 dark:text-slate-100"
-        >
-          Continue with Google
-        </button>
-
-        {error?.toLowerCase().includes("verification link expired") ? (
-          <button
-            type="button"
-            disabled={resending || loading}
-            onClick={() => {
-              void handleResendConfirmation();
-            }}
-            className="mt-3 w-full rounded-xl border border-white/20 bg-white/60 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-white/80 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-800/60 dark:text-slate-100"
-          >
-            {resending ? "Sending..." : "Resend verification email"}
-          </button>
-        ) : null}
-
-        {message ? <p className="mt-4 text-sm text-sky-700 dark:text-sky-200">{message}</p> : null}
-        {error ? <p className="mt-4 text-sm text-red-600 dark:text-red-200">{error}</p> : null}
+            {message ? <p className="text-sm text-cyan-200">{message}</p> : null}
+            {error ? <p className="text-sm text-red-300">{error}</p> : null}
+          </div>
+        </div>
       </div>
     </main>
   );

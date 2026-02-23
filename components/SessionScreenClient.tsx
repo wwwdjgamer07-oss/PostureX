@@ -11,6 +11,7 @@ import type { FatigueLevel } from "@/lib/fatigueDetection";
 import type { CoachEvent } from "@/lib/coachPersonality";
 import { generate_coach_message } from "@/lib/coachPersonality";
 import { getSensorAvailability, type SensorPostureFrame } from "@/lib/posture/sensorPosture";
+import { detectMobile, hasMobileSensorSupport } from "@/lib/mobileSensor";
 import type { PostureFrame, PostureMode, PostureSource } from "@/lib/posture/types";
 import { usePostureFatigue } from "@/lib/usePostureFatigue";
 import type { PostureMetrics, RiskLevel } from "@/lib/postureEngine";
@@ -39,6 +40,8 @@ export function SessionScreenClient() {
   const [cameraAvailable, setCameraAvailable] = useState(true);
   const [sensorAvailable, setSensorAvailable] = useState(false);
   const [sensorPhoneOnly, setSensorPhoneOnly] = useState(false);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [sensorAutoFailed, setSensorAutoFailed] = useState(false);
   const [latestSensorFrame, setLatestSensorFrame] = useState<SensorPostureFrame | null>(null);
 
   const postureScore = useMemo(
@@ -110,16 +113,26 @@ export function SessionScreenClient() {
     const availability = getSensorAvailability();
     setSensorAvailable(availability.supported);
     setSensorPhoneOnly(availability.isPhone);
+    setIsMobileDevice(detectMobile());
   }, []);
 
+  const shouldAutoSensorStart = useMemo(
+    () => isMobileDevice && hasMobileSensorSupport() && sensorAvailable,
+    [isMobileDevice, sensorAvailable]
+  );
+
   useEffect(() => {
+    if (shouldAutoSensorStart && postureMode === "auto" && !sensorAutoFailed) {
+      setResolvedSource("sensor");
+      return;
+    }
     if (postureMode !== "auto") {
       setResolvedSource(resolvePostureSource(postureMode, cameraAvailable, sensorAvailable));
       return;
     }
     const blocked = permissionStatus === "denied" || permissionStatus === "unsupported";
-    setResolvedSource(blocked && sensorAvailable ? "sensor" : resolvePostureSource(postureMode, cameraAvailable, sensorAvailable));
-  }, [cameraAvailable, permissionStatus, postureMode, resolvePostureSource, sensorAvailable]);
+    setResolvedSource(blocked && sensorAvailable && !sensorAutoFailed ? "sensor" : resolvePostureSource(postureMode, cameraAvailable, sensorAvailable));
+  }, [cameraAvailable, permissionStatus, postureMode, resolvePostureSource, sensorAutoFailed, sensorAvailable, shouldAutoSensorStart]);
 
   useEffect(() => {
     if (sessionSeconds < 2) {
@@ -346,6 +359,11 @@ export function SessionScreenClient() {
               }}
               onSessionStop={(durationSeconds, alertCount, sessionId, breakTaken) => {
                 void stopSessionAndSave(durationSeconds, alertCount, sessionId, breakTaken, "sensor");
+              }}
+              autoStart={shouldAutoSensorStart}
+              onAutoStartFailed={() => {
+                setSensorAutoFailed(true);
+                setResolvedSource("camera");
               }}
               onPermissionChange={setPermissionStatus}
             />
