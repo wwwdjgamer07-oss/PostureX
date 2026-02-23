@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { apiError } from "@/lib/api/response";
 
 export async function requireApiUser() {
   const supabase = createServerSupabaseClient();
@@ -10,7 +10,7 @@ export async function requireApiUser() {
 
   if (error || !user) {
     return {
-      error: NextResponse.json({ error: "Unauthorized." }, { status: 401 }),
+      error: apiError("Unauthorized.", 401, "UNAUTHORIZED"),
       supabase,
       user: null
     };

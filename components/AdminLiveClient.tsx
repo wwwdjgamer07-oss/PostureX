@@ -94,10 +94,24 @@ export function AdminLiveClient({ initial }: Props) {
   };
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      void refresh();
-    }, 5000);
-    return () => clearInterval(timer);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let active = true;
+
+    const schedule = (ms: number) => {
+      if (!active) return;
+      timer = setTimeout(async () => {
+        if (document.visibilityState === "visible") {
+          await refresh();
+        }
+        schedule(5000);
+      }, ms);
+    };
+
+    schedule(5000);
+    return () => {
+      active = false;
+      if (timer) clearTimeout(timer);
+    };
   }, []);
 
   return (
@@ -219,4 +233,3 @@ export function AdminLiveClient({ initial }: Props) {
     </section>
   );
 }
-

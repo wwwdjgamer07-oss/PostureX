@@ -1,11 +1,26 @@
 /** @type {import('next').NextConfig} */
+const isProd = process.env.NODE_ENV === "production";
+
 const nextConfig = {
   reactStrictMode: true,
-  onDemandEntries: {
-    // Reduce aggressive dev-page disposal that can cause missing chunk loads on Windows.
-    maxInactiveAge: 60 * 60 * 1000,
-    pagesBufferLength: 10
+  poweredByHeader: false,
+  compress: true,
+  compiler: {
+    removeConsole: isProd
+      ? {
+          exclude: ["error", "warn"]
+        }
+      : false
   },
+  ...(isProd
+    ? {}
+    : {
+        onDemandEntries: {
+          // Reduce aggressive dev-page disposal that can cause missing chunk loads on Windows.
+          maxInactiveAge: 60 * 60 * 1000,
+          pagesBufferLength: 10
+        }
+      }),
   experimental: {
     serverActions: {
       bodySizeLimit: "2mb"
@@ -21,10 +36,24 @@ const nextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(self), microphone=()" }
         ]
+      },
+      {
+        source: "/:path*\\.(js|css|svg|png|jpg|jpeg|webp|ico|woff2)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }]
+      },
+      {
+        source: "/mediapipe/(.*)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }]
+      },
+      {
+        source: "/games/(.*)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }]
       }
     ];
   },
   images: {
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 60 * 60 * 24 * 7,
     remotePatterns: [
       {
         protocol: "https",
@@ -56,7 +85,7 @@ const nextConfig = {
   }
 };
 
-if (process.env.NODE_ENV === "production") {
+if (isProd) {
   const withPWA = require("next-pwa")({
     dest: "public",
     disable: false,

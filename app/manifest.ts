@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "PostureX",
     short_name: "PostureX",
-    description: "Engineered posture intelligence",
+    description: "AI posture intelligence & PX Play arcade",
     start_url: "/",
     display: "standalone",
     background_color: "#0B0F14",

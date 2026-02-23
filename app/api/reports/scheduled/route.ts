@@ -1,23 +1,26 @@
-import { NextResponse } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { deliverScheduledReports } from "@/lib/reports/service";
+import { safeCompare } from "@/lib/security";
+import { getCronSecret } from "@/lib/env";
+import { apiError, apiOk } from "@/lib/api/response";
 
 export const runtime = "nodejs";
 
 function isAuthorized(request: Request) {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) return true;
+  const expected = getCronSecret();
+  if (!expected) return process.env.NODE_ENV !== "production";
 
-  const bearer = request.headers.get("authorization");
-  if (bearer === `Bearer ${expected}`) return true;
+  const bearer = request.headers.get("authorization") ?? "";
+  const bearerToken = bearer.startsWith("Bearer ") ? bearer.slice(7) : "";
+  if (bearerToken && safeCompare(bearerToken, expected)) return true;
 
-  const header = request.headers.get("x-cron-secret");
-  return header === expected;
+  const header = request.headers.get("x-cron-secret") ?? "";
+  return header.length === expected.length && safeCompare(header, expected);
 }
 
 async function runScheduled(request: Request) {
   if (!isAuthorized(request)) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    return apiError("Unauthorized.", 401, "UNAUTHORIZED");
   }
 
   try {
@@ -27,14 +30,14 @@ async function runScheduled(request: Request) {
     const skipped = results.filter((item) => !item.result.ok && item.result.reason).length;
     const failed = results.filter((item) => !item.result.ok && !item.result.reason).length;
 
-    return NextResponse.json({
+    return apiOk({
       success: true,
       summary: { attempted: results.length, sent, skipped, failed },
       results
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to process scheduled reports.";
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return apiError(message, 500, "SCHEDULED_REPORTS_FAILED");
   }
 }
 

@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { getAppUrl } from "@/lib/env";
 
 type AuthMode = "signin" | "signup";
 
@@ -20,7 +21,7 @@ export default function AuthPage() {
   const [resending, setResending] = useState(false);
 
   function getSiteUrl() {
-    const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+    const fromEnv = getAppUrl();
     if (fromEnv) return fromEnv.replace(/\/$/, "");
     if (typeof window !== "undefined") return window.location.origin;
     return "";

@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { getResendFromEmail } from "@/lib/env";
 
 const host = process.env.SMTP_HOST || "smtp.gmail.com";
 const port = Number(process.env.SMTP_PORT || 465);
@@ -31,7 +32,7 @@ interface SendEmailResult {
 }
 
 function resolveFromEmail() {
-  return process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || "PostureX <no-reply@posturex.in>";
+  return getResendFromEmail();
 }
 
 async function sendWithResend(input: SendEmailInput): Promise<SendEmailResult> {

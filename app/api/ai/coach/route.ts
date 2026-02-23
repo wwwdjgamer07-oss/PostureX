@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { detectEmotionSignal, type EmotionLabel } from "@/lib/ai/emotionEngine";
 import { buildUpdatedMemory, createDefaultMemory, type UserMemoryRecord } from "@/lib/ai/memoryEngine";
@@ -6,6 +5,8 @@ import { generateLLMCoachResponse } from "@/lib/ai/llmCoach";
 import { generateCoachResponse } from "@/lib/ai/responseGenerator";
 import { selectCoachPersona } from "@/lib/ai/coachPersona";
 import type { PostureAIMetrics, PostureAIMessage } from "@/lib/postureAI";
+import { sanitizeText } from "@/lib/api/request";
+import { apiError, apiOk } from "@/lib/api/response";
 
 export const runtime = "nodejs";
 
@@ -144,7 +145,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401, "UNAUTHORIZED");
   }
 
   const [{ data: logs, error: logsError }, { data: emotionRow }, { data: memoryRow }] = await Promise.all([
@@ -165,7 +166,7 @@ export async function GET() {
   ]);
 
   if (logsError) {
-    return NextResponse.json({ error: logsError.message }, { status: 500 });
+    return apiError(logsError.message, 500, "COACH_STATE_READ_FAILED");
   }
 
   const messages = ((logs ?? []) as ConversationLogRow[])
@@ -177,7 +178,7 @@ export async function GET() {
       createdAt: row.created_at
     }));
 
-  return NextResponse.json({
+  return apiOk({
     messages,
     emotion: (emotionRow as EmotionStateRow | null)?.primary_emotion ?? "neutral",
     memory: parseMemoryRow((memoryRow as UserMemoryRow | null) ?? null)
@@ -191,29 +192,26 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401, "UNAUTHORIZED");
   }
 
   let body: CoachRequestBody;
   try {
     body = (await request.json()) as CoachRequestBody;
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+    return apiError("Invalid JSON body.", 400, "INVALID_JSON");
   }
 
-  const userMessage = String(body.message ?? "").trim();
+  const userMessage = sanitizeText(body.message, MAX_MESSAGE_LENGTH);
   if (!userMessage) {
-    return NextResponse.json({ error: "Message is required." }, { status: 400 });
+    return apiError("Message is required.", 400, "MESSAGE_REQUIRED");
   }
   if (userMessage.length > MAX_MESSAGE_LENGTH) {
-    return NextResponse.json(
-      { error: `Message is too long. Keep it under ${MAX_MESSAGE_LENGTH} characters.` },
-      { status: 400 }
-    );
+    return apiError(`Message is too long. Keep it under ${MAX_MESSAGE_LENGTH} characters.`, 400, "MESSAGE_TOO_LONG");
   }
 
   if (!body.metrics) {
-    return NextResponse.json({ error: "Metrics are required." }, { status: 400 });
+    return apiError("Metrics are required.", 400, "METRICS_REQUIRED");
   }
   const metrics = normalizeMetrics(body.metrics);
 
@@ -347,10 +345,10 @@ export async function POST(request: Request) {
     contextUpsert.error ||
     conversationInsert.error;
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return apiError(error.message, 500, "COACH_WRITE_FAILED");
   }
 
-  return NextResponse.json({
+  return apiOk({
     message: {
       id: `assistant-${Date.now()}`,
       role: "assistant",

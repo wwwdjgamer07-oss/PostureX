@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
 import { requireApiUser } from "@/lib/api";
+import { z } from "zod";
+import { parseJsonBody, sanitizeText } from "@/lib/api/request";
+import { apiError, apiOk } from "@/lib/api/response";
 
 export const runtime = "nodejs";
 
@@ -24,6 +26,12 @@ function normalizePlan(planId: unknown): PaidPlan | null {
   return null;
 }
 
+const CreateOrderSchema = z.object({
+  planId: z.string().trim(),
+  amount: z.number().finite(),
+  userId: z.string().trim().uuid()
+});
+
 export async function POST(request: Request) {
   const { error, supabase, user } = await requireApiUser();
   if (error || !user) return error;
@@ -31,30 +39,27 @@ export async function POST(request: Request) {
   const keyId = process.env.RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
   if (!keyId || !keySecret) {
-    return NextResponse.json({ error: "Razorpay server keys are not configured." }, { status: 500 });
+    return apiError("Razorpay server keys are not configured.", 500, "RAZORPAY_CONFIG_MISSING");
   }
 
-  let payload: { planId?: unknown; amount?: unknown; userId?: unknown };
-  try {
-    payload = (await request.json()) as { planId?: unknown; amount?: unknown; userId?: unknown };
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
-  }
+  const parsed = await parseJsonBody(request, CreateOrderSchema);
+  if (!parsed.ok) return parsed.response;
+  const payload = parsed.data;
 
   const plan = normalizePlan(payload.planId);
   if (!plan) {
-    return NextResponse.json({ error: "Invalid planId. Use BASIC, PRO, or PRO_WEEKLY." }, { status: 400 });
+    return apiError("Invalid planId. Use BASIC, PRO, or PRO_WEEKLY.", 400, "INVALID_PLAN");
   }
 
-  const requestUserId = String(payload.userId ?? "");
+  const requestUserId = sanitizeText(payload.userId, 64);
   if (!requestUserId || requestUserId !== user.id) {
-    return NextResponse.json({ error: "Invalid userId." }, { status: 403 });
+    return apiError("Invalid userId.", 403, "FORBIDDEN");
   }
 
   const expectedAmount = PLAN_PRICES_INR[plan];
-  const amount = Number(payload.amount ?? 0);
+  const amount = Number(payload.amount);
   if (!Number.isFinite(amount) || amount !== expectedAmount) {
-    return NextResponse.json({ error: `Invalid amount for ${plan}.` }, { status: 400 });
+    return apiError(`Invalid amount for ${plan}.`, 400, "INVALID_AMOUNT");
   }
 
   const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
@@ -81,13 +86,11 @@ export async function POST(request: Request) {
     if (paymentInsertError) {
       const message = paymentInsertError.message || "Failed to save payment intent.";
       if (!isMissingPaymentsTableError(message)) {
-        return NextResponse.json({ error: message }, { status: 500 });
+        return apiError(message, 500, "PAYMENT_LOG_PERSISTENCE_FAILED");
       }
-      // Non-blocking: allow checkout to proceed even if payment logging table is unavailable.
-      console.warn("[create-order] Skipping payment intent persistence because payments table is unavailable.");
     }
 
-    return NextResponse.json({ orderId: order.id });
+    return apiOk({ orderId: order.id });
   } catch (error) {
     const message =
       error && typeof error === "object" && "description" in error
@@ -100,19 +103,10 @@ export async function POST(request: Request) {
         ? Number((error as { statusCode?: number }).statusCode)
         : 500;
 
-    console.error("[create-order] Razorpay order creation failed", {
-      userId: user.id,
-      plan,
-      amount: expectedAmount,
-      statusCode,
-      message
-    });
-
-    return NextResponse.json(
-      {
-        error: message || "Failed to create Razorpay order."
-      },
-      { status: Number.isFinite(statusCode) && statusCode >= 400 ? statusCode : 500 }
+    return apiError(
+      message || "Failed to create Razorpay order.",
+      Number.isFinite(statusCode) && statusCode >= 400 ? statusCode : 500,
+      "RAZORPAY_ORDER_FAILED"
     );
   }
 }

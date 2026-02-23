@@ -1,18 +1,60 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseRetryFetch } from "@/lib/supabase/retryFetch";
+import { getClientIp, rateLimit } from "@/lib/security";
 
 const ADMIN_OTP_COOKIE = "px_admin_otp_verified";
+const API_RATE_DEFAULT = { prefix: "*", limit: 120, windowMs: 60_000 };
+const API_RATE_RULES: Array<{ prefix: string; limit: number; windowMs: number }> = [
+  { prefix: "/api/ai/coach", limit: 40, windowMs: 60_000 },
+  { prefix: "/api/admin/live/overview", limit: 30, windowMs: 60_000 },
+  { prefix: "/api/create-order", limit: 20, windowMs: 60_000 },
+  { prefix: "/api/verify-payment", limit: 20, windowMs: 60_000 },
+  { prefix: "/api/reports", limit: 30, windowMs: 60_000 }
+];
+
+function resolveApiRateLimit(pathname: string) {
+  return API_RATE_RULES.find((rule) => pathname.startsWith(rule.prefix)) ?? API_RATE_DEFAULT;
+}
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const normalized = pathname.toLowerCase();
   const isNextInternal = pathname.startsWith("/_next");
   const isStaticAsset = /\.[a-z0-9]+$/i.test(pathname);
+  const isApiRoute = pathname.startsWith("/api/");
 
   // Never run auth/session logic for framework internals or static assets.
   if (isNextInternal || isStaticAsset) {
     return NextResponse.next();
+  }
+
+  if (isApiRoute) {
+    const ip = getClientIp(request);
+    const rule = resolveApiRateLimit(pathname);
+    const key = `${ip}:${rule.prefix === "*" ? pathname : rule.prefix}`;
+    const result = rateLimit(key, rule.limit, rule.windowMs);
+
+    if (!result.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please retry shortly." },
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": String(rule.limit),
+            "X-RateLimit-Remaining": String(result.remaining),
+            "X-RateLimit-Reset": String(Math.ceil(result.resetAt / 1000)),
+            "Retry-After": String(Math.max(1, Math.ceil((result.resetAt - Date.now()) / 1000)))
+          }
+        }
+      );
+    }
+
+    const response = NextResponse.next();
+    response.headers.set("X-RateLimit-Limit", String(rule.limit));
+    response.headers.set("X-RateLimit-Remaining", String(result.remaining));
+    response.headers.set("X-RateLimit-Reset", String(Math.ceil(result.resetAt / 1000)));
+    return response;
   }
 
   // Normalize common malformed/case-variant routes before auth checks.
@@ -35,9 +77,15 @@ export async function middleware(request: NextRequest) {
     },
   });
 
+  const supabaseUrl = String(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim();
+  const supabaseAnonKey = String(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim();
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return response;
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       global: {
         fetch: supabaseRetryFetch
@@ -120,6 +168,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * Feel free to modify this pattern to include more paths.
      */
-    "/((?!api|_next/static|_next/image|favicon.ico).*)",
+    "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };

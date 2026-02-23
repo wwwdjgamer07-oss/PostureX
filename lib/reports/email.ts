@@ -23,10 +23,6 @@ export async function sendReportEmail(input: SendReportEmailInput): Promise<Send
   if (!process.env.RESEND_API_KEY && (!process.env.SMTP_USER || !process.env.SMTP_PASS)) {
     throw new Error("Configure RESEND_API_KEY or SMTP_USER/SMTP_PASS.");
   }
-  if (!process.env.RESEND_FROM_EMAIL && !process.env.EMAIL_FROM) {
-    throw new Error("RESEND_FROM_EMAIL or EMAIL_FROM is missing.");
-  }
-
   const title = periodTitle(input.period);
   const subject = `Your PostureX ${title} Posture Report`;
 

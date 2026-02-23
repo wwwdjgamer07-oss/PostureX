@@ -1,9 +1,15 @@
-import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/api";
 import { getUserPlanTierForClient } from "@/lib/planAccess";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { deliverUserPostureReport } from "@/lib/reports/service";
 import type { UserDeliveryProfile } from "@/lib/reports/service";
+import { z } from "zod";
+import { parseJsonBody } from "@/lib/api/request";
+import { apiError, apiOk } from "@/lib/api/response";
+
+const ReportEmailSchema = z.object({
+  period: z.enum(["daily", "weekly"]).optional()
+});
 
 export async function POST(request: Request) {
   const { error, supabase, user } = await requireApiUser();
@@ -12,18 +18,13 @@ export async function POST(request: Request) {
   const planTier = await getUserPlanTierForClient(supabase, user.id, user.email);
 
   if (planTier === "FREE") {
-    return NextResponse.json({ error: "Email reports are available on BASIC and PRO plans." }, { status: 403 });
+    return apiError("Email reports are available on BASIC and PRO plans.", 403, "PLAN_REQUIRED");
   }
 
   let period: "daily" | "weekly" = "weekly";
-  try {
-    const body = (await request.json()) as { period?: unknown };
-    const requested = String(body.period ?? "").toLowerCase();
-    if (requested === "daily" || requested === "weekly") {
-      period = requested;
-    }
-  } catch {
-    // Keep default period
+  const parsed = await parseJsonBody(request, ReportEmailSchema);
+  if (parsed.ok && parsed.data.period) {
+    period = parsed.data.period;
   }
 
   const admin = createAdminSupabaseClient();
@@ -45,8 +46,8 @@ export async function POST(request: Request) {
   });
 
   if (!result.ok) {
-    return NextResponse.json({ success: false, error: result.error || result.reason || "Failed to send report email." }, { status: 500 });
+    return apiError(result.error || result.reason || "Failed to send report email.", 500, "REPORT_EMAIL_FAILED");
   }
 
-  return NextResponse.json({ success: true, period, messageId: result.messageId ?? null });
+  return apiOk({ success: true, period, messageId: result.messageId ?? null });
 }

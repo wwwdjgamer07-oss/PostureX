@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import Razorpay from "razorpay";
 import { requireApiUser } from "@/lib/api";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { z } from "zod";
+import { parseJsonBody, sanitizeText } from "@/lib/api/request";
+import { apiError, apiOk } from "@/lib/api/response";
 
 export const runtime = "nodejs";
 
@@ -49,6 +51,14 @@ function verifyRazorpaySignature(orderId: string, paymentId: string, signature: 
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
 }
 
+const VerifyPaymentSchema = z.object({
+  razorpay_payment_id: z.string().trim().min(1),
+  razorpay_order_id: z.string().trim().min(1),
+  razorpay_signature: z.string().trim().min(1),
+  userId: z.string().trim().uuid(),
+  planId: z.string().trim()
+});
+
 export async function POST(request: Request) {
   const { error, user } = await requireApiUser();
   if (error || !user) return error;
@@ -56,48 +66,33 @@ export async function POST(request: Request) {
   const keyId = process.env.RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
   if (!keyId || !keySecret) {
-    return NextResponse.json({ error: "Razorpay server keys are not configured." }, { status: 500 });
+    return apiError("Razorpay server keys are not configured.", 500, "RAZORPAY_CONFIG_MISSING");
   }
 
-  let payload: {
-    razorpay_payment_id?: unknown;
-    razorpay_order_id?: unknown;
-    razorpay_signature?: unknown;
-    userId?: unknown;
-    planId?: unknown;
-  };
-  try {
-    payload = (await request.json()) as {
-      razorpay_payment_id?: unknown;
-      razorpay_order_id?: unknown;
-      razorpay_signature?: unknown;
-      userId?: unknown;
-      planId?: unknown;
-    };
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
-  }
+  const parsed = await parseJsonBody(request, VerifyPaymentSchema);
+  if (!parsed.ok) return parsed.response;
+  const payload = parsed.data;
 
-  const paymentId = String(payload.razorpay_payment_id ?? "");
-  const orderId = String(payload.razorpay_order_id ?? "");
-  const signature = String(payload.razorpay_signature ?? "");
-  const requestUserId = String(payload.userId ?? "");
+  const paymentId = sanitizeText(payload.razorpay_payment_id, 128);
+  const orderId = sanitizeText(payload.razorpay_order_id, 128);
+  const signature = sanitizeText(payload.razorpay_signature, 256);
+  const requestUserId = sanitizeText(payload.userId, 64);
   const plan = normalizePlan(payload.planId);
 
   if (!paymentId || !orderId || !signature) {
-    return NextResponse.json({ error: "Payment verification payload is incomplete." }, { status: 400 });
+    return apiError("Payment verification payload is incomplete.", 400, "INVALID_PAYLOAD");
   }
   if (!plan) {
-    return NextResponse.json({ error: "Invalid planId. Use BASIC, PRO, or PRO_WEEKLY." }, { status: 400 });
+    return apiError("Invalid planId. Use BASIC, PRO, or PRO_WEEKLY.", 400, "INVALID_PLAN");
   }
   if (!requestUserId || requestUserId !== user.id) {
-    return NextResponse.json({ error: "Invalid userId." }, { status: 403 });
+    return apiError("Invalid userId.", 403, "FORBIDDEN");
   }
 
   const validSignature = verifyRazorpaySignature(orderId, paymentId, signature, keySecret);
 
   if (!validSignature) {
-    return NextResponse.json({ success: false, error: "Invalid Razorpay signature." }, { status: 400 });
+    return apiError("Invalid Razorpay signature.", 400, "INVALID_SIGNATURE");
   }
 
   const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
@@ -107,14 +102,14 @@ export async function POST(request: Request) {
     const expectedAmountPaise = PLAN_PRICES_INR[plan] * 100;
 
     if (payment.status !== "captured" && payment.status !== "authorized") {
-      return NextResponse.json({ success: false, error: "Payment is not captured yet." }, { status: 400 });
+      return apiError("Payment is not captured yet.", 400, "PAYMENT_NOT_CAPTURED");
     }
 
     if (Number(payment.amount ?? 0) !== expectedAmountPaise) {
-      return NextResponse.json({ success: false, error: "Payment amount mismatch." }, { status: 400 });
+      return apiError("Payment amount mismatch.", 400, "PAYMENT_AMOUNT_MISMATCH");
     }
   } catch {
-    return NextResponse.json({ success: false, error: "Unable to validate payment with Razorpay." }, { status: 400 });
+    return apiError("Unable to validate payment with Razorpay.", 400, "PAYMENT_VALIDATION_FAILED");
   }
 
   const admin = createAdminSupabaseClient();
@@ -126,7 +121,6 @@ export async function POST(request: Request) {
   const expiryIso = expiryDate.toISOString();
   const planLower = plan.toLowerCase();
 
-  let shouldSkipPaymentLogging = false;
   let paymentWritePromise: PromiseLike<{ error: { message?: string } | null }>;
 
   const { data: existingApproved, error: existingApprovedError } = await admin
@@ -142,13 +136,12 @@ export async function POST(request: Request) {
   if (existingApprovedError) {
     const errorMessage = existingApprovedError.message || "Failed to validate payment state.";
     if (isMissingPaymentsTableError(errorMessage)) {
-      shouldSkipPaymentLogging = true;
       paymentWritePromise = Promise.resolve({ error: null });
     } else {
-      return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
+      return apiError(errorMessage, 500, "PAYMENT_STATE_VALIDATION_FAILED");
     }
   } else if (existingApproved?.id) {
-    return NextResponse.json({
+    return apiOk({
       success: true,
       plan: planTier,
       startDate: nowIso,
@@ -168,10 +161,9 @@ export async function POST(request: Request) {
     if (latestCreatedError) {
       const errorMessage = latestCreatedError.message || "Failed to load payment record.";
       if (isMissingPaymentsTableError(errorMessage)) {
-        shouldSkipPaymentLogging = true;
         paymentWritePromise = Promise.resolve({ error: null });
       } else {
-        return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
+        return apiError(errorMessage, 500, "PAYMENT_RECORD_LOAD_FAILED");
       }
     } else {
       paymentWritePromise = latestCreated?.id
@@ -213,9 +205,8 @@ export async function POST(request: Request) {
     const subMessage = subUpdate.error.message || "";
     if (isMissingSubscriptionsTableError(subMessage)) {
       skipSubscriptionPersistence = true;
-      console.warn("[verify-payment] subscriptions table unavailable. Plan activated via users.plan_tier only.");
     } else {
-      return NextResponse.json({ success: false, error: subMessage || "Failed to persist subscription." }, { status: 500 });
+      return apiError(subMessage || "Failed to persist subscription.", 500, "SUBSCRIPTION_PERSISTENCE_FAILED");
     }
   }
 
@@ -223,14 +214,10 @@ export async function POST(request: Request) {
   if (dbError) {
     const errMessage = dbError.message || "Failed to activate subscription.";
     if (isMissingPaymentsTableError(errMessage)) {
-      shouldSkipPaymentLogging = true;
+      // Non-blocking when payment table is unavailable.
     } else {
-      return NextResponse.json({ success: false, error: errMessage }, { status: 500 });
+      return apiError(errMessage, 500, "PLAN_ACTIVATION_FAILED");
     }
-  }
-
-  if (shouldSkipPaymentLogging) {
-    console.warn("[verify-payment] payments table unavailable. Subscription activated without payment log persistence.");
   }
 
   if (userUpdate.error || (subUpdate.error && !skipSubscriptionPersistence)) {
@@ -239,7 +226,7 @@ export async function POST(request: Request) {
       (skipSubscriptionPersistence ? null : subUpdate.error?.message) ||
       dbError?.message ||
       "Failed to activate subscription.";
-    return NextResponse.json({ success: false, error: activationErrorMessage }, { status: 500 });
+    return apiError(String(activationErrorMessage), 500, "PLAN_ACTIVATION_FAILED");
   }
 
   await admin.from("notifications").insert({
@@ -250,7 +237,7 @@ export async function POST(request: Request) {
     read: false
   });
 
-  return NextResponse.json({
+  return apiOk({
     success: true,
     plan: planTier,
     startDate: nowIso,
