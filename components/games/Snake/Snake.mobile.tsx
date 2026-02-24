@@ -16,6 +16,7 @@ export default function SnakeMobile({ onExit }: SnakeMobileProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number | null>(null);
+  const touchStartRef = useRef<Point | null>(null);
   const lastTickRef = useRef(0);
   const snakeRef = useRef<Point[]>([{ x: 8, y: 11 }, { x: 7, y: 11 }, { x: 6, y: 11 }]);
   const dirRef = useRef<Dir>({ x: 1, y: 0 });
@@ -149,6 +150,28 @@ export default function SnakeMobile({ onExit }: SnakeMobileProps) {
     nextDirRef.current = { x, y };
   };
 
+  const onTouchStart = (event: React.TouchEvent<HTMLCanvasElement>) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const onTouchEnd = (event: React.TouchEvent<HTMLCanvasElement>) => {
+    const touch = event.changedTouches[0];
+    const start = touchStartRef.current;
+    if (!touch || !start) return;
+
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.abs(dx) < 18 && Math.abs(dy) < 18) return;
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+      setDir(dx > 0 ? 1 : -1, 0);
+    } else {
+      setDir(0, dy > 0 ? 1 : -1);
+    }
+  };
+
   const restart = () => {
     snakeRef.current = [{ x: 8, y: 11 }, { x: 7, y: 11 }, { x: 6, y: 11 }];
     dirRef.current = { x: 1, y: 0 };
@@ -173,27 +196,11 @@ export default function SnakeMobile({ onExit }: SnakeMobileProps) {
       </div>
 
       <div ref={containerRef} className="flex-1 w-full bg-black">
-        <canvas ref={canvasRef} className="h-full w-full" />
+        <canvas ref={canvasRef} className="h-full w-full touch-none" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} />
       </div>
 
       <div className="space-y-3 border-t border-cyan-400/20 bg-white/5 p-3 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
-        <p className="text-sm text-cyan-100">Score: {score}</p>
-        <div className="grid grid-cols-3 gap-2">
-          <span />
-          <button type="button" onClick={() => setDir(0, -1)} className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-3 text-sm font-semibold">
-            Up
-          </button>
-          <span />
-          <button type="button" onClick={() => setDir(-1, 0)} className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-3 text-sm font-semibold">
-            Left
-          </button>
-          <button type="button" onClick={() => setDir(0, 1)} className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-3 text-sm font-semibold">
-            Down
-          </button>
-          <button type="button" onClick={() => setDir(1, 0)} className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-3 text-sm font-semibold">
-            Right
-          </button>
-        </div>
+        <p className="text-sm text-cyan-100">Score: {score} · Swipe on the board to turn</p>
         <button type="button" onClick={restart} className="w-full rounded-2xl border border-cyan-400/30 bg-cyan-500/15 p-3 shadow-[0_0_24px_rgba(34,211,238,0.18)]">
           Restart
         </button>
