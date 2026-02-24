@@ -22,6 +22,7 @@ export function buildPushPayload(title: string, body: string, icon = "/icon.svg"
     title,
     body,
     icon,
+    silent: true,
     data: { url }
   });
 }

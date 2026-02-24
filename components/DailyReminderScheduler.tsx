@@ -67,7 +67,8 @@ export function DailyReminderScheduler() {
         if (sessionsToday > 0) return;
 
         new Notification("Posture Check", {
-          body: "You haven't checked posture today"
+          body: "You haven't checked posture today",
+          silent: true
         });
         localStorage.setItem(firedKey, today);
       };
@@ -117,4 +118,3 @@ export function DailyReminderScheduler() {
 
   return null;
 }
-
