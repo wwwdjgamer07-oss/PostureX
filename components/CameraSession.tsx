@@ -132,11 +132,7 @@ export function CameraSession({
   }, []);
 
   useEffect(() => {
-    if (running && isMobileViewport) {
-      setMobileFullscreen(true);
-      return;
-    }
-    if (!running) {
+    if (!running || !isMobileViewport) {
       setMobileFullscreen(false);
     }
   }, [isMobileViewport, running]);
