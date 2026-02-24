@@ -18,6 +18,9 @@ export function applyGodModeProfile(profile: PersonalizationProfile): Personaliz
   return {
     ...profile,
     coins: MAX_BALANCE,
+    walletCoins: MAX_BALANCE,
+    walletGems: MAX_BALANCE * 3,
+    walletXP: MAX_BALANCE,
     gems: {
       blue: MAX_BALANCE,
       purple: MAX_BALANCE,

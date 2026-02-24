@@ -47,7 +47,7 @@ export async function POST(request: Request) {
   const { data, error: fetchError } = await supabase
     .from("users")
     .select(
-      "px_coins,px_gems,px_inventory,px_equipped_items,px_theme_id,px_ui_skin,px_ai_style,px_avatar,px_frame,px_custom_themes,px_dashboard_layout"
+      "\"walletCoins\",\"walletGems\",\"walletXP\",px_coins,px_gems,px_inventory,px_equipped_items,px_theme_id,px_ui_skin,px_ai_style,px_avatar,px_frame,px_custom_themes,px_dashboard_layout"
     )
     .eq("id", user.id)
     .maybeSingle();
@@ -63,6 +63,9 @@ export async function POST(request: Request) {
   const { error: updateError } = await supabase
     .from("users")
     .update({
+      walletCoins: next.walletCoins,
+      walletGems: next.walletGems,
+      walletXP: next.walletXP,
       px_coins: next.coins,
       px_gems: next.gems,
       px_inventory: next.inventory

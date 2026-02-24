@@ -4,6 +4,7 @@ import { useEffect, useSyncExternalStore } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { applyPersonalizationToDocument } from "@/lib/personalization/client";
 import type { PersonalizationProfile, StoreItem } from "@/lib/personalization/types";
+import { useWallet } from "@/lib/stores/walletStore";
 
 const STORAGE_KEY = "px.personalization.cache.v1";
 const THROTTLE_MS = 5000;
@@ -60,6 +61,11 @@ function applyProfile(profile: PersonalizationProfile) {
   state.error = null;
   state.lastFetchedAt = Date.now();
   applyPersonalizationToDocument(profile);
+  useWallet.getState().setWallet({
+    coins: profile.walletCoins ?? profile.coins,
+    gems: profile.walletGems ?? (profile.gems.blue + profile.gems.purple + profile.gems.gold),
+    xp: profile.walletXP ?? 0
+  });
   writeCachedProfile(profile);
 }
 
@@ -82,12 +88,17 @@ export function setPersonalizationProfileFromMutation(profile: PersonalizationPr
 export function setPersonalizationWalletFromMutation(wallet: {
   coins: number;
   gems: { blue: number; purple: number; gold: number };
+  xp?: number;
 }) {
   if (!state.profile) return;
+  const totalGems = Number(wallet.gems.blue ?? 0) + Number(wallet.gems.purple ?? 0) + Number(wallet.gems.gold ?? 0);
   applyProfile({
     ...state.profile,
     coins: wallet.coins,
-    gems: wallet.gems
+    gems: wallet.gems,
+    walletCoins: wallet.coins,
+    walletGems: Math.max(0, Math.floor(totalGems)),
+    walletXP: Math.max(0, Math.floor(Number(wallet.xp ?? state.profile.walletXP ?? 0)))
   });
   emit();
 }

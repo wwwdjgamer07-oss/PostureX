@@ -18,6 +18,7 @@ import { resolveLevel } from "@/lib/games/xpSystem";
 import { useIsObsidianSkullTheme } from "@/lib/personalization/usePxTheme";
 import { readDailyReport, SENSOR_ACTIVE_KEY, SensorPostureEngine, type SensorDailyReport } from "@/lib/sensorPostureEngine";
 import { usePushNotifications } from "@/lib/usePushNotifications";
+import { useWallet } from "@/lib/stores/walletStore";
 import type { PlanTier } from "@/lib/types";
 
 interface SessionRecord {
@@ -104,6 +105,10 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
   const [activeTab, setActiveTab] = useState<"overview" | "rewards">("overview");
   const [rewardProgress, setRewardProgress] = useState<RewardProgressState>(createDefaultRewardProgress());
   const { profile: personalizationProfile } = usePersonalizationProfile();
+  const walletCoins = useWallet((state) => state.coins);
+  const walletGems = useWallet((state) => state.gems);
+  const walletXp = useWallet((state) => state.xp);
+  const setWallet = useWallet((state) => state.setWallet);
   const isObsidianSkull = useIsObsidianSkullTheme();
   const [layout, setLayout] = useState<DashboardLayoutState>(() => ({
     compact: Boolean(initialDashboardLayout?.compact ?? false),
@@ -132,6 +137,11 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
       window.removeEventListener("focus", syncRewards);
     };
   }, []);
+
+  useEffect(() => {
+    if (walletXp > 0 || rewardProgress.xp <= 0) return;
+    setWallet({ xp: rewardProgress.xp });
+  }, [rewardProgress.xp, setWallet, walletXp]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -163,11 +173,6 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
     };
   }, []);
 
-  const serverWallet = personalizationProfile
-    ? { coins: personalizationProfile.coins, gems: personalizationProfile.gems }
-    : null;
-  const displayedPxCoins = serverWallet?.coins ?? rewardProgress.coins;
-
   const persistLayout = async (next: DashboardLayoutState) => {
     setLayout(next);
     try {
@@ -197,7 +202,7 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
     void persistLayout({ ...layout, hiddenWidgets: hidden });
   };
 
-  const xpLevelState = resolveLevel(rewardProgress.xp);
+  const xpLevelState = resolveLevel(walletXp);
 
   return (
     <div className={`px-shell grid gap-6 lg:grid-cols-[220px_1fr] ${layout.compact ? "text-[0.94rem]" : ""}`}>
@@ -280,9 +285,9 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
             >
               Header: {layout.headerStyle}
             </button>
-            {serverWallet ? (
+            {personalizationProfile ? (
               <span className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1 text-cyan-700 dark:text-cyan-100">
-                Wallet: {serverWallet.coins} PX Coins | {serverWallet.gems.blue}/{serverWallet.gems.purple}/{serverWallet.gems.gold} Gems
+                Wallet: {walletCoins} PX Coins | {walletGems} Gems
               </span>
             ) : null}
           </div>
@@ -459,9 +464,9 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
               <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 <p className="px-kpi inline-flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-200">
                   {isObsidianSkull ? <SkullCoinIcon className="h-4 w-4 text-violet-200" /> : null}
-                  PX Coins: <span className="font-semibold text-cyan-700 dark:text-cyan-200">{displayedPxCoins}</span>
+                  PX Coins: <span className="font-semibold text-cyan-700 dark:text-cyan-200">{walletCoins}</span>
                 </p>
-                <p className="px-kpi text-sm text-slate-700 dark:text-slate-200">XP: <span className="font-semibold text-cyan-700 dark:text-cyan-200">{rewardProgress.xp}</span></p>
+                <p className="px-kpi text-sm text-slate-700 dark:text-slate-200">XP: <span className="font-semibold text-cyan-700 dark:text-cyan-200">{walletXp}</span></p>
                 <p className="px-kpi text-sm text-slate-700 dark:text-slate-200">Level: <span className="font-semibold text-cyan-700 dark:text-cyan-200">{rewardProgress.level}</span></p>
                 <p className="px-kpi text-sm text-slate-700 dark:text-slate-200">Avatar Stage: <span className="font-semibold text-cyan-700 dark:text-cyan-200">{rewardProgress.avatarStage}</span></p>
               </div>

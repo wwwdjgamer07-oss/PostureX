@@ -97,6 +97,9 @@ export interface DashboardLayoutConfig {
 export interface PersonalizationProfile {
   coins: number;
   gems: GemWallet;
+  walletCoins: number;
+  walletGems: number;
+  walletXP: number;
   inventory: string[];
   equippedItems: {
     theme: string;

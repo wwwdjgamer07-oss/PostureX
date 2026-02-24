@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Brain, Gamepad2, Rocket, Grid3X3, CircleDot, Brackets, Layers, Coins, Gem, Shield, Trophy } from "lucide-react";
-import { SkullCoinIcon, SkullCrystalIcon, SkullGemIcon, SkullJoystickIcon } from "@/components/icons/SkullIcons";
+import { SkullCoinIcon, SkullCrystalIcon, SkullJoystickIcon } from "@/components/icons/SkullIcons";
 import { FullscreenGameLayout } from "@/components/games/FullscreenGameLayout";
 import { PXCustomizationPanel } from "@/components/pxplay/PXCustomizationPanel";
 import { useResizeCanvas } from "@/lib/games/useResizeCanvas";
 import { setPersonalizationWalletFromMutation, usePersonalizationProfile } from "@/lib/personalization/profileClient";
 import { useIsObsidianSkullTheme } from "@/lib/personalization/usePxTheme";
+import { useWallet } from "@/lib/stores/walletStore";
 
 type GameId = "snake" | "lander" | "xo" | "pong" | "breakout" | "memory";
 type ArcadeTheme = "neon" | "toxic" | "sunset";
@@ -1993,6 +1994,10 @@ function MemoryGame({
 export function PXPlayClient() {
   const isObsidianSkull = useIsObsidianSkullTheme();
   const { profile: personalizationProfile } = usePersonalizationProfile();
+  const setWallet = useWallet((state) => state.setWallet);
+  const walletCoins = useWallet((state) => state.coins);
+  const walletGems = useWallet((state) => state.gems);
+  const walletXp = useWallet((state) => state.xp);
   const [activeGame, setActiveGame] = useState<GameId | null>(null);
   const [viewMode, setViewMode] = useState<"games" | "rewards">("games");
   const [theme, setTheme] = useState<ArcadeTheme>("neon");
@@ -2004,7 +2009,6 @@ export function PXPlayClient() {
   const [copiedPrompt, setCopiedPrompt] = useState<string | null>(null);
   const [inventory, setInventory] = useState<ArcadeInventory>(() => readInventory());
   const [rewardPopup, setRewardPopup] = useState<{ game: GameId; rewards: RewardResult; won: boolean; score: number } | null>(null);
-  const [serverWallet, setServerWallet] = useState<{ coins: number; gems: { blue: number; purple: number; gold: number } } | null>(null);
   const gameFrameRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -2053,7 +2057,11 @@ export function PXPlayClient() {
   useEffect(() => {
     if (!personalizationProfile) return;
     const resolvedWallet = { coins: personalizationProfile.coins, gems: personalizationProfile.gems };
-    setServerWallet(resolvedWallet);
+    setWallet({
+      coins: personalizationProfile.walletCoins ?? resolvedWallet.coins,
+      gems: personalizationProfile.walletGems ?? (resolvedWallet.gems.blue + resolvedWallet.gems.purple + resolvedWallet.gems.gold),
+      xp: personalizationProfile.walletXP ?? walletXp
+    });
     setInventory((prev) => ({
       ...prev,
       coins: Math.max(prev.coins, resolvedWallet.coins),
@@ -2063,7 +2071,7 @@ export function PXPlayClient() {
         gold: Math.max(prev.gems.gold, resolvedWallet.gems.gold)
       }
     }));
-  }, [personalizationProfile]);
+  }, [personalizationProfile, setWallet, walletXp]);
 
   const syncServerEarnings = useCallback((source: string, rewards: RewardResult) => {
     void fetch("/api/personalization/earn", {
@@ -2081,7 +2089,6 @@ export function PXPlayClient() {
           profile?: { coins: number; gems: { blue: number; purple: number; gold: number } };
         };
         if (payload.profile) {
-          setServerWallet({ coins: payload.profile.coins, gems: payload.profile.gems });
           setPersonalizationWalletFromMutation({
             coins: payload.profile.coins,
             gems: payload.profile.gems
@@ -2092,21 +2099,6 @@ export function PXPlayClient() {
         // keep local rewards even if backend sync fails
       });
   }, []);
-
-  const displayedWallet = useMemo(
-    () =>
-      serverWallet
-        ? {
-            coins: Math.max(serverWallet.coins, inventory.coins),
-            gems: {
-              blue: Math.max(serverWallet.gems.blue, inventory.gems.blue),
-              purple: Math.max(serverWallet.gems.purple, inventory.gems.purple),
-              gold: Math.max(serverWallet.gems.gold, inventory.gems.gold)
-            }
-          }
-        : { coins: inventory.coins, gems: inventory.gems },
-    [serverWallet, inventory.coins, inventory.gems]
-  );
 
   const applyFinish = (game: GameId, score: number, won: boolean) => {
     setPersisted((prev) => {
@@ -2163,6 +2155,11 @@ export function PXPlayClient() {
         }
 
         saveInventory(nextInventory);
+        setWallet({
+          coins: nextInventory.coins,
+          gems: nextInventory.gems.blue + nextInventory.gems.purple + nextInventory.gems.gold,
+          xp: walletXp
+        });
         syncServerEarnings("games", rewards);
         setRewardPopup({ game, rewards, won, score });
         return nextInventory;
@@ -2365,6 +2362,11 @@ export function PXPlayClient() {
         equipped: { ...prev.equipped, [item.equipKey]: item.equipValue as never }
       };
       saveInventory(next);
+      setWallet({
+        coins: next.coins,
+        gems: next.gems.blue + next.gems.purple + next.gems.gold,
+        xp: walletXp
+      });
       return next;
     });
   };
@@ -2421,10 +2423,8 @@ export function PXPlayClient() {
           <article className="px-panel p-5">
             <h2 className="text-lg font-semibold text-white">Inventory</h2>
             <div className="mt-4 space-y-2 text-sm">
-              <p className="flex items-center gap-2 text-amber-200">{isObsidianSkull ? <SkullCoinIcon className="h-4 w-4" /> : <Coins className="h-4 w-4" />} PX Coins: {displayedWallet.coins}</p>
-              <p className="flex items-center gap-2 text-cyan-200">{isObsidianSkull ? <SkullCrystalIcon className="h-4 w-4" /> : <Gem className="h-4 w-4" />} Blue Gems: {displayedWallet.gems.blue}</p>
-              <p className="flex items-center gap-2 text-violet-200">{isObsidianSkull ? <SkullGemIcon className="h-4 w-4" /> : <Gem className="h-4 w-4" />} Purple Gems: {displayedWallet.gems.purple}</p>
-              <p className="flex items-center gap-2 text-yellow-200">{isObsidianSkull ? <SkullCrystalIcon className="h-4 w-4" /> : <Gem className="h-4 w-4" />} Gold Gems: {displayedWallet.gems.gold}</p>
+              <p className="flex items-center gap-2 text-amber-200">{isObsidianSkull ? <SkullCoinIcon className="h-4 w-4" /> : <Coins className="h-4 w-4" />} PX Coins: {walletCoins}</p>
+              <p className="flex items-center gap-2 text-cyan-200">{isObsidianSkull ? <SkullCrystalIcon className="h-4 w-4" /> : <Gem className="h-4 w-4" />} Total Gems: {walletGems}</p>
               <p className="flex items-center gap-2 text-emerald-200"><Trophy className="h-4 w-4" /> Trophies: {inventory.trophies.length}</p>
             </div>
             <div className="mt-4">

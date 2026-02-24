@@ -85,9 +85,20 @@ function spendFromGemPool(gems: GemWallet, amount: number): GemWallet {
   return next;
 }
 
+function syncWallet(profile: PersonalizationProfile): PersonalizationProfile {
+  return {
+    ...profile,
+    walletCoins: profile.coins,
+    walletGems: totalGems(profile.gems)
+  };
+}
+
 export function normalizePersonalizationRow(row: Record<string, unknown> | null | undefined): PersonalizationProfile {
   const record = row ?? {};
   const gems = parseGemWallet(record.px_gems);
+  const walletCoins = Math.max(0, Math.floor(toNumber(record.walletCoins ?? record.px_coins, 0)));
+  const walletGems = Math.max(0, Math.floor(toNumber(record.walletGems, totalGems(gems))));
+  const walletXP = Math.max(0, Math.floor(toNumber(record.walletXP, 0)));
   const inventory = asStringArray(record.px_inventory);
   const safeInventory = inventory.length > 0 ? Array.from(new Set(inventory)) : defaultInventory();
   const equippedMap = asRecord(record.px_equipped_items);
@@ -99,8 +110,11 @@ export function normalizePersonalizationRow(row: Record<string, unknown> | null 
   const frame = String(record.px_frame ?? equippedMap.frame ?? "none");
 
   return {
-    coins: Math.max(0, Math.floor(toNumber(record.px_coins, 0))),
+    coins: walletCoins,
     gems,
+    walletCoins,
+    walletGems,
+    walletXP,
     inventory: safeInventory,
     equippedItems: {
       theme: themeId,
@@ -165,11 +179,11 @@ export function applyPurchase(
 
     if (wantsCoins || (!wantsGemSpend && canCoins)) {
       next.coins = Math.max(0, profile.coins - item.cost);
-      return next;
+      return syncWallet(next);
     }
 
     next.gems = spendFromGemPool(profile.gems, 3);
-    return next;
+    return syncWallet(next);
   }
 
   const spendOptions = [
@@ -207,7 +221,7 @@ export function applyPurchase(
   if (selected.currency === "purple_gem") next.gems.purple = Math.max(0, profile.gems.purple - selected.cost);
   if (selected.currency === "gold_gem") next.gems.gold = Math.max(0, profile.gems.gold - selected.cost);
 
-  return next;
+  return syncWallet(next);
 }
 
 export function equipItem(itemId: string, profile: PersonalizationProfile): PersonalizationProfile {
@@ -263,14 +277,14 @@ export function addCustomTheme(profile: PersonalizationProfile, draft: CustomThe
     : [...profile.inventory, `theme:${customThemeId}`];
   const nextThemes = [...profile.customThemes, draft];
 
-  return {
+  return syncWallet({
     ...profile,
     coins: Math.max(0, profile.coins - createCost),
     inventory: nextInventory,
     customThemes: nextThemes,
     themeId: customThemeId,
     equippedItems: { ...profile.equippedItems, theme: customThemeId }
-  };
+  });
 }
 
 export function applyEarnings(
@@ -288,11 +302,13 @@ export function applyEarnings(
   next.gems.blue = Math.max(0, next.gems.blue + Math.max(0, Math.floor(toNumber(gems.blue, 0))));
   next.gems.purple = Math.max(0, next.gems.purple + Math.max(0, Math.floor(toNumber(gems.purple, 0))));
   next.gems.gold = Math.max(0, next.gems.gold + Math.max(0, Math.floor(toNumber(gems.gold, 0))));
+  next.walletCoins = next.coins;
+  next.walletGems = totalGems(next.gems);
 
   if (source === "milestone" && !next.inventory.includes("frame:gold-frame")) {
     next.inventory = [...next.inventory, "frame:gold-frame"];
   }
-  return next;
+  return syncWallet(next);
 }
 
 export function composeThemeVariables(themeId: string, customThemes: CustomThemeDraft[]) {

@@ -14,7 +14,7 @@ export async function GET() {
   const { data, error: dbError } = await supabase
     .from("users")
     .select(
-      "px_coins,px_gems,px_inventory,px_equipped_items,px_theme_id,px_ui_skin,px_ai_style,px_avatar,px_frame,px_custom_themes,px_dashboard_layout"
+      "\"walletCoins\",\"walletGems\",\"walletXP\",px_coins,px_gems,px_inventory,px_equipped_items,px_theme_id,px_ui_skin,px_ai_style,px_avatar,px_frame,px_custom_themes,px_dashboard_layout"
     )
     .eq("id", user.id)
     .maybeSingle();

@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bot, Send, Sparkles, X } from "lucide-react";
+import { Bot, Sparkles, X } from "lucide-react";
 import { SkullBrainIcon } from "@/components/icons/SkullIcons";
 import { AIMessage } from "@/components/dashboard/AIMessage";
 import { EmotionIndicator } from "@/components/dashboard/EmotionIndicator";
-import { MicInput } from "@/components/dashboard/MicInput";
 import { VoiceToggle } from "@/components/dashboard/VoiceToggle";
+import ChatInput from "@/components/chat/ChatInput";
 import { prepareSpeechText, resolvePreferredVoice, resolveVoiceProfile } from "@/lib/ai/voiceEngine";
 import { buildWelcomeMessage, type PostureAIMetrics, type PostureAIMessage } from "@/lib/postureAI";
 import { useIsObsidianSkullTheme } from "@/lib/personalization/usePxTheme";
@@ -339,36 +339,14 @@ export function AIChatPanel({
         </div>
 
         <div className="border-t border-slate-500/20 p-3">
-          <div className="flex items-center gap-2 rounded-full border border-slate-500/35 bg-slate-900/65 px-3 py-2 backdrop-blur">
-            <MicInput
-              onTranscript={(text) => {
-                setMicError(null);
-                setInput((prev) => (prev ? `${prev} ${text}` : text));
-              }}
-              onError={(message) => setMicError(message || null)}
-            />
-            <input
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault();
-                  sendMessage();
-                }
-              }}
-              placeholder="Ask about your posture..."
-              className="w-full bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-500"
-            />
-            <button
-              type="button"
-              onClick={sendMessage}
-              disabled={typing || input.trim().length === 0}
-              className="grid h-8 w-8 place-items-center rounded-full border border-cyan-300/45 bg-cyan-400/15 text-cyan-100 transition hover:shadow-[0_0_16px_rgba(34,211,238,0.24)] disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label="Send message"
-            >
-              <Send className="h-3.5 w-3.5" />
-            </button>
-          </div>
+          <ChatInput
+            value={input}
+            onChange={setInput}
+            onSubmit={sendMessage}
+            disabled={typing}
+            placeholder="Ask about your posture..."
+            onError={(message) => setMicError(message || null)}
+          />
           {micError ? <p className="mt-2 text-[11px] text-amber-200/90">{micError}</p> : null}
         </div>
       </div>

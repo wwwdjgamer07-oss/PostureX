@@ -19,18 +19,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const currentRes = await supabase.from("users").select("px_coins,px_gems").eq("id", user.id).maybeSingle();
+  const currentRes = await supabase.from("users").select("\"walletCoins\",\"walletGems\",\"walletXP\",px_coins,px_gems").eq("id", user.id).maybeSingle();
   if (currentRes.error) {
     return NextResponse.json({ error: currentRes.error.message || "Failed to load wallet." }, { status: 500 });
   }
 
-  const currentRow = (currentRes.data as { px_coins?: number; px_gems?: { blue?: number; purple?: number; gold?: number } } | null) ?? null;
-  const currentCoins = Math.max(0, Math.floor(asNumber(currentRow?.px_coins, 0)));
+  const currentRow = (currentRes.data as {
+    walletCoins?: number;
+    walletGems?: number;
+    walletXP?: number;
+    px_coins?: number;
+    px_gems?: { blue?: number; purple?: number; gold?: number };
+  } | null) ?? null;
+  const currentCoins = Math.max(0, Math.floor(asNumber(currentRow?.walletCoins ?? currentRow?.px_coins, 0)));
   const currentGems = {
     blue: Math.max(0, Math.floor(asNumber(currentRow?.px_gems?.blue, 0))),
     purple: Math.max(0, Math.floor(asNumber(currentRow?.px_gems?.purple, 0))),
     gold: Math.max(0, Math.floor(asNumber(currentRow?.px_gems?.gold, 0)))
   };
+  const currentXP = Math.max(0, Math.floor(asNumber(currentRow?.walletXP, 0)));
 
   // One-time migration guard: only import if server wallet is still empty.
   const serverAlreadyInitialized =
@@ -40,7 +47,7 @@ export async function POST(request: Request) {
       ok: true,
       migrated: false,
       reason: "server_wallet_already_initialized",
-      wallet: { coins: currentCoins, gems: currentGems }
+      wallet: { coins: currentCoins, gems: currentGems, xp: currentXP }
     });
   }
 
@@ -64,6 +71,9 @@ export async function POST(request: Request) {
   const updateRes = await supabase
     .from("users")
     .update({
+      walletCoins: nextWallet.coins,
+      walletGems: nextWallet.gems.blue + nextWallet.gems.purple + nextWallet.gems.gold,
+      walletXP: currentXP,
       px_coins: nextWallet.coins,
       px_gems: nextWallet.gems
     })
@@ -73,5 +83,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: updateRes.error.message || "Failed to migrate wallet." }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, migrated: true, wallet: nextWallet });
+  return NextResponse.json({ ok: true, migrated: true, wallet: { ...nextWallet, xp: currentXP } });
 }

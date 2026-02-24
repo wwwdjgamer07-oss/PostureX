@@ -2,16 +2,16 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Bot, Send, Sparkles, Volume2, X } from "lucide-react";
+import { Bot, Sparkles, Volume2, X } from "lucide-react";
 import { SkullBrainIcon } from "@/components/icons/SkullIcons";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import type { UserMemoryRecord } from "@/lib/ai/memoryEngine";
 import { prepareSpeechText, resolvePreferredVoice, resolveVoiceProfile } from "@/lib/ai/voiceEngine";
-import { MicInput } from "@/components/dashboard/MicInput";
 import { VoiceToggle } from "@/components/dashboard/VoiceToggle";
 import { buildWelcomeMessage, type PostureAIMetrics, type PostureAIMessage } from "@/lib/postureAI";
 import { useIsObsidianSkullTheme } from "@/lib/personalization/usePxTheme";
 import { cn } from "@/lib/utils";
+import ChatInput from "@/components/chat/ChatInput";
 
 interface CoachStateResponse {
   messages?: PostureAIMessage[];
@@ -671,56 +671,36 @@ export function GlobalChatbot() {
           </div>
 
           <div className="relative z-10 border-t border-cyan-200/15 p-3">
-            <div className="flex items-center gap-2 rounded-full border border-slate-500/35 bg-slate-900/65 px-3 py-2 backdrop-blur">
-              <VoiceToggle
-                enabled={voiceEnabled}
-                onToggle={() => {
-                  const next = !voiceEnabled;
-                  setVoiceEnabled(next);
-                  if (typeof window === "undefined") return;
-                  const raw = window.localStorage.getItem("mrx-settings");
-                  const parsed = raw
-                    ? (JSON.parse(raw) as { darkMode?: boolean; voiceCoach?: boolean; notifications?: boolean })
-                    : {};
-                  window.localStorage.setItem(
-                    "mrx-settings",
-                    JSON.stringify({
-                      ...parsed,
-                      voiceCoach: next
-                    })
-                  );
-                  window.dispatchEvent(new Event("posturex-settings-updated"));
-                }}
-              />
-              <MicInput
-                onTranscript={(text) => {
-                  setMicError(null);
-                  setInput((prev) => (prev ? `${prev} ${text}` : text));
-                }}
-                onError={(message) => setMicError(message)}
-              />
-              <input
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    sendMessage();
-                  }
-                }}
-                placeholder="Ask anything about posture, plans, or progress..."
-                className="w-full bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-500"
-              />
-              <button
-                type="button"
-                onClick={sendMessage}
-                disabled={typing || input.trim().length === 0}
-                className="grid h-8 w-8 place-items-center rounded-full border border-cyan-300/45 bg-cyan-400/15 text-cyan-100 transition hover:shadow-[0_0_16px_rgba(34,211,238,0.24)] disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label="Send message"
-              >
-                <Send className="h-3.5 w-3.5" />
-              </button>
-            </div>
+            <ChatInput
+              value={input}
+              onChange={setInput}
+              onSubmit={sendMessage}
+              disabled={typing}
+              placeholder="Ask anything about posture, plans, or progress..."
+              onError={(message) => setMicError(message)}
+              leading={
+                <VoiceToggle
+                  enabled={voiceEnabled}
+                  onToggle={() => {
+                    const next = !voiceEnabled;
+                    setVoiceEnabled(next);
+                    if (typeof window === "undefined") return;
+                    const raw = window.localStorage.getItem("mrx-settings");
+                    const parsed = raw
+                      ? (JSON.parse(raw) as { darkMode?: boolean; voiceCoach?: boolean; notifications?: boolean })
+                      : {};
+                    window.localStorage.setItem(
+                      "mrx-settings",
+                      JSON.stringify({
+                        ...parsed,
+                        voiceCoach: next
+                      })
+                    );
+                    window.dispatchEvent(new Event("posturex-settings-updated"));
+                  }}
+                />
+              }
+            />
             {micError ? <p className="mt-2 text-[11px] text-amber-200/90">{compactMicError(micError)}</p> : null}
           </div>
         </div>
