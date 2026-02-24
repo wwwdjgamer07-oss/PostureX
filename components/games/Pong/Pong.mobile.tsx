@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 type PongMobileProps = {
   onExit?: () => void;
 };
+const CANVAS_RESOLUTION_SCALE = 0.72;
 
 export default function PongMobile({ onExit }: PongMobileProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -21,8 +22,12 @@ export default function PongMobile({ onExit }: PongMobileProps) {
     if (!container || !canvas) return;
 
     const resize = () => {
-      canvas.width = container.clientWidth;
-      canvas.height = container.clientHeight;
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      canvas.width = Math.max(1, Math.floor(width * CANVAS_RESOLUTION_SCALE));
+      canvas.height = Math.max(1, Math.floor(height * CANVAS_RESOLUTION_SCALE));
     };
     resize();
     const obs = new ResizeObserver(resize);

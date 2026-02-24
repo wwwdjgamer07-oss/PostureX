@@ -47,6 +47,7 @@ const tiles: GameTile[] = [
 const STORAGE_KEY = "px_arcade_stats_v1";
 const REWARDS_KEY = "px_arcade_rewards_v1";
 const TUTORIAL_KEY = "px_arcade_tutorial_seen_v1";
+const STRICT_MODE_KEY = "px_arcade_strict_mode_v1";
 const LEVEL_COLORS = ["#ff2b2b", "#ff4b1f", "#ff9d00", "#ffd226", "#d4f62d", "#a6ef2e", "#5ed648"];
 
 type Persisted = Record<GameId, { best: number; streak: number }>;
@@ -207,6 +208,24 @@ function todayKey() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function readStrictMode() {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(STRICT_MODE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function saveStrictMode(enabled: boolean) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(STRICT_MODE_KEY, enabled ? "1" : "0");
+  } catch {
+    // no-op
+  }
+}
+
 function calcRewards(params: {
   game: GameId;
   score: number;
@@ -216,11 +235,12 @@ function calcRewards(params: {
   streak: number;
   stats: ArcadeStats | null;
   inventory: ArcadeInventory;
+  strictMode?: boolean;
 }): RewardResult {
-  const { score, won, isFirstWin, isHighScore, streak, stats, inventory } = params;
+  const { score, won, isFirstWin, isHighScore, streak, stats, inventory, strictMode = false } = params;
   const result: RewardResult = {
-    coins: Math.max(8, Math.floor(score * 0.25) + (won ? 28 : 6)),
-    gems: { blue: won ? 1 : 0, purple: 0, gold: 0 },
+    coins: strictMode ? (won ? Math.max(6, Math.floor(score * 0.18) + 14) : 0) : Math.max(8, Math.floor(score * 0.25) + (won ? 28 : 6)),
+    gems: { blue: won && (!strictMode || score >= 80) ? 1 : 0, purple: 0, gold: 0 },
     badgesUnlocked: [],
     trophiesUnlocked: [],
     titlesUnlocked: [],
@@ -228,40 +248,40 @@ function calcRewards(params: {
   };
 
   if (isFirstWin) {
-    result.coins += 50;
-    result.gems.purple += 1;
+    result.coins += strictMode ? 30 : 50;
+    if (!strictMode || score >= 100) result.gems.purple += 1;
     result.badgesUnlocked.push("First Win");
   }
-  if (isHighScore) {
+  if (isHighScore && (!strictMode || score >= 120)) {
     result.coins += 30;
-    result.gems.gold += 1;
+    if (!strictMode || score >= 180) result.gems.gold += 1;
     result.trophiesUnlocked.push("High Score Trophy");
     result.notes.push("High Score");
   }
-  if (won && streak >= 3) {
+  if (won && streak >= (strictMode ? 5 : 3)) {
     result.coins += 24;
-    result.gems.purple += 1;
-    result.badgesUnlocked.push("Streak x3");
+    if (!strictMode || score >= 140) result.gems.purple += 1;
+    result.badgesUnlocked.push(strictMode ? "Streak x5" : "Streak x3");
   }
   if (won && inventory.lastPlayedDate !== todayKey()) {
-    result.coins += 18;
-    result.gems.blue += 1;
+    result.coins += strictMode ? 12 : 18;
+    if (!strictMode || score >= 90) result.gems.blue += 1;
     result.notes.push("Daily Play");
   }
-  if (stats && won && stats.level >= 3) {
+  if (stats && won && stats.level >= (strictMode ? 4 : 3)) {
     result.coins += 16;
     result.badgesUnlocked.push("Level Clear");
   }
   if (stats && won && stats.lives >= 3) {
-    result.coins += 20;
-    result.gems.purple += 1;
+    result.coins += strictMode ? 14 : 20;
+    if (!strictMode || score >= 160) result.gems.purple += 1;
     result.badgesUnlocked.push("Perfect Round");
   }
-  if (stats && stats.score >= 180) {
+  if (stats && stats.score >= (strictMode ? 260 : 180)) {
     result.coins += 22;
     result.notes.push("Survival Milestone");
   }
-  if (won && score >= 220) {
+  if (won && score >= (strictMode ? 320 : 220)) {
     result.titlesUnlocked.push("Arcade Ace");
   }
   return result;
@@ -2000,6 +2020,7 @@ export function PXPlayClient() {
   const walletXp = useWallet((state) => state.xp);
   const [activeGame, setActiveGame] = useState<GameId | null>(null);
   const [viewMode, setViewMode] = useState<"games" | "rewards">("games");
+  const [strictMode, setStrictMode] = useState<boolean>(() => readStrictMode());
   const [theme, setTheme] = useState<ArcadeTheme>("neon");
   const [landerSpeed, setLanderSpeed] = useState<1 | 2 | 3 | 4>(1);
   const [landerLoopMode, setLanderLoopMode] = useState(false);
@@ -2053,6 +2074,10 @@ export function PXPlayClient() {
       window.removeEventListener("keyup", onKey);
     };
   }, [activeGame, viewMode]);
+
+  useEffect(() => {
+    saveStrictMode(strictMode);
+  }, [strictMode]);
 
   useEffect(() => {
     if (!personalizationProfile) return;
@@ -2122,7 +2147,8 @@ export function PXPlayClient() {
           isHighScore,
           streak: updatedStreak,
           stats: gameStats,
-          inventory: invPrev
+          inventory: invPrev,
+          strictMode
         });
 
         const mergedBadges = Array.from(new Set([...invPrev.badges, ...rewards.badgesUnlocked]));
@@ -2401,6 +2427,17 @@ export function PXPlayClient() {
               PX Rewards
             </button>
           </div>
+          <button
+            type="button"
+            onClick={() => setStrictMode((prev) => !prev)}
+            className={`rounded-xl border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] transition ${
+              strictMode
+                ? "border-rose-300/45 bg-rose-500/15 text-rose-100"
+                : "border-slate-500/30 bg-slate-900/50 text-slate-300 hover:text-slate-100"
+            }`}
+          >
+            Strict Mode: {strictMode ? "On" : "Off"}
+          </button>
           <div className="inline-flex rounded-xl border border-slate-500/30 bg-slate-900/50 p-1">
           {inventory.themesUnlocked.map((key) => (
             <button
@@ -2416,6 +2453,9 @@ export function PXPlayClient() {
           ))}
           </div>
         </div>
+        {strictMode ? (
+          <p className="mt-2 text-xs text-rose-200">Strict mode is active: harder reward thresholds and lower coin payout.</p>
+        ) : null}
       </section> : null}
 
       {viewMode === "rewards" ? (

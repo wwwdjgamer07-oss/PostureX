@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 
+const CANVAS_RESOLUTION_SCALE = 0.72;
+
 export function useResizeCanvas(
   containerRef: React.RefObject<HTMLElement>,
   canvasRef: React.RefObject<HTMLCanvasElement>
@@ -15,8 +17,10 @@ export function useResizeCanvas(
       const width = container.clientWidth;
       const height = container.clientHeight;
       if (!width || !height) return;
-      canvas.width = width;
-      canvas.height = height;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      canvas.width = Math.max(1, Math.floor(width * CANVAS_RESOLUTION_SCALE));
+      canvas.height = Math.max(1, Math.floor(height * CANVAS_RESOLUTION_SCALE));
     };
 
     resize();

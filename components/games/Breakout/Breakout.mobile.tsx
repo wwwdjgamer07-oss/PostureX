@@ -7,6 +7,7 @@ type BreakoutMobileProps = {
 };
 
 type Brick = { x: number; y: number; w: number; h: number; alive: boolean };
+const CANVAS_RESOLUTION_SCALE = 0.72;
 
 export default function BreakoutMobile({ onExit }: BreakoutMobileProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -39,8 +40,12 @@ export default function BreakoutMobile({ onExit }: BreakoutMobileProps) {
     const canvas = canvasRef.current;
     if (!container || !canvas) return;
     const resize = () => {
-      canvas.width = container.clientWidth;
-      canvas.height = container.clientHeight;
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      canvas.width = Math.max(1, Math.floor(width * CANVAS_RESOLUTION_SCALE));
+      canvas.height = Math.max(1, Math.floor(height * CANVAS_RESOLUTION_SCALE));
     };
     resize();
     const obs = new ResizeObserver(resize);
@@ -167,4 +172,3 @@ export default function BreakoutMobile({ onExit }: BreakoutMobileProps) {
     </div>
   );
 }
-
