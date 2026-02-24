@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { getAppUrl } from "@/lib/env";
@@ -19,6 +19,7 @@ export default function AuthPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
+  const autoGoogleTriggeredRef = useRef(false);
 
   function getSiteUrl() {
     const fromEnv = getAppUrl();
@@ -73,6 +74,19 @@ export default function AuthPage() {
 
     void run();
   }, [router, supabase.auth]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (autoGoogleTriggeredRef.current) return;
+    const query = new URLSearchParams(window.location.search);
+    if (query.get("provider") !== "google") return;
+    if (query.get("error")) return;
+    if (query.get("code")) return;
+    autoGoogleTriggeredRef.current = true;
+    void handleGoogleOAuth();
+    // handleGoogleOAuth intentionally omitted to avoid recreating auto trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

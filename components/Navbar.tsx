@@ -172,7 +172,7 @@ export function Navbar() {
           ) : (
             <div className="flex items-center gap-2">
               <StartFreeButton className="px-button-ghost py-2">Start Free</StartFreeButton>
-              <Link href="/auth" className="px-button-ghost py-2">
+              <Link href="/auth?provider=google" className="px-button-ghost py-2">
                 Sign in
               </Link>
             </div>
