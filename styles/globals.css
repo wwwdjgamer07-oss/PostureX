@@ -850,6 +850,11 @@ html[data-ui-skin="px-elite"] .px-panel {
   .app-root {
     overscroll-behavior-y: contain;
   }
+
+  body.px-play-game-active .px-global-chat-trigger-wrap,
+  body.px-play-game-active .px-global-chat-wrap {
+    display: none;
+  }
 }
 
 html:not(.dark) .px-panel {

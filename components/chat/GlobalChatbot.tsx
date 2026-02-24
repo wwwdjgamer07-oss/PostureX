@@ -546,7 +546,7 @@ export function GlobalChatbot() {
 
   return (
     <>
-      <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-4 z-[70] sm:right-6 md:bottom-6">
+      <div className="px-global-chat-trigger-wrap fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-4 z-[70] sm:right-6 md:bottom-6">
         <div className="group relative">
           <button
             type="button"
@@ -566,7 +566,7 @@ export function GlobalChatbot() {
 
       <aside
         className={cn(
-          "fixed right-4 top-20 z-[68] flex h-[min(78vh,740px)] w-[min(92vw,390px)] origin-bottom-right transition-all duration-300 sm:right-6",
+          "px-global-chat-wrap fixed right-4 top-20 z-[68] flex h-[min(78vh,740px)] w-[min(92vw,390px)] origin-bottom-right transition-all duration-300 sm:right-6",
           isOpen ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-6 scale-95 opacity-0"
         )}
         aria-hidden={!isOpen}

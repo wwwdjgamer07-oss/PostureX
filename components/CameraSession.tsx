@@ -600,7 +600,7 @@ export function CameraSession({
         <p className="rounded-full border border-slate-300/50 bg-white/75 px-3 py-1 text-xs text-slate-700 dark:border-slate-500/30 dark:bg-slate-900/70 dark:text-slate-300">{elapsed}s</p>
       </div>
 
-      <div className="relative h-[62vh] min-h-[340px] max-h-[74vh] w-full overflow-hidden rounded-2xl border border-cyan-300/25 bg-slate-950 sm:h-auto sm:min-h-0 sm:max-h-none sm:aspect-video">
+      <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-cyan-300/25 bg-slate-950">
         <video ref={videoRef} className="h-full w-full object-cover" muted playsInline autoPlay />
         {!running ? (
           <div className="pointer-events-none absolute inset-0 grid place-items-center px-4 text-center">

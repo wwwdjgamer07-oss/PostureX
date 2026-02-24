@@ -295,6 +295,24 @@ function useIsTouchDevice() {
   return isTouch;
 }
 
+function useViewportWidth() {
+  const [width, setWidth] = useState(1280);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const update = () => setWidth(window.innerWidth || 1280);
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+    };
+  }, []);
+
+  return width;
+}
+
 function useAnimationFrame(loop: (dt: number) => void, enabled: boolean) {
   const rafRef = useRef<number | null>(null);
   const prevRef = useRef<number>(0);
@@ -364,7 +382,7 @@ function GameFrame({
   }, [levelUpLevel]);
 
   return (
-    <section className={`relative overflow-hidden rounded-2xl border p-2.5 sm:rounded-[2rem] sm:p-5 shadow-[0_24px_70px_rgba(2,8,23,0.35)] ${skin.frameClass}`}>
+    <section className={`relative overflow-visible sm:overflow-hidden rounded-2xl border p-2.5 sm:rounded-[2rem] sm:p-5 shadow-[0_24px_70px_rgba(2,8,23,0.35)] ${skin.frameClass}`}>
       {!isRetroLander ? <div className="pointer-events-none absolute inset-0 px-game-grid opacity-30" /> : null}
       {!isRetroLander ? <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${themeMeta[theme].frame}`} /> : null}
       <div className="relative z-10 space-y-2.5 sm:space-y-4">
@@ -721,7 +739,7 @@ function SnakeGame({
           ref={canvasRef}
           width={384}
           height={384}
-          className="mx-auto h-[56vh] max-h-[620px] w-auto max-w-[96vw] rounded-xl touch-none"
+          className="mx-auto h-auto w-[92vw] max-w-[384px] rounded-xl touch-none sm:h-[56vh] sm:w-auto sm:max-w-[96vw]"
           onTouchStart={(event) => {
             const touch = event.touches[0];
             if (!touch) return;
@@ -742,7 +760,7 @@ function SnakeGame({
           }}
         />
         {isTouch ? (
-          <div className="mx-auto grid w-[240px] grid-cols-3 gap-2">
+          <div className="mx-auto grid w-full max-w-[240px] grid-cols-3 gap-2">
             <span />
             <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-3 text-cyan-100" onClick={() => setDirection(0, -1)}>Up</button>
             <span />
@@ -1062,7 +1080,7 @@ function LanderGame({
     reset,
     canvas: (
       <div className="w-full space-y-3">
-        <canvas ref={canvasRef} width={width} height={height} className="mx-auto h-[50vh] max-h-[620px] w-auto max-w-[98vw] rounded-none touch-none" />
+        <canvas ref={canvasRef} width={width} height={height} className="mx-auto h-auto w-[96vw] max-w-[1100px] rounded-none touch-none sm:h-[50vh] sm:w-auto sm:max-w-[98vw]" />
         {isTouch ? (
           <div className="mx-auto grid w-full max-w-md grid-cols-3 gap-2">
             <button
@@ -1120,6 +1138,7 @@ function XOGame({
   theme: ArcadeTheme;
 }) {
   const isTouch = useIsTouchDevice();
+  const viewportWidth = useViewportWidth();
   const [variantId, setVariantId] = useState<VariantId>("classic");
   const variant = useMemo(() => XO_VARIANTS.find((v) => v.id === variantId) ?? XO_VARIANTS[0], [variantId]);
   const [selectedWildMark, setSelectedWildMark] = useState<Mark>("X");
@@ -1404,7 +1423,7 @@ function XOGame({
     setStatusText(`AI level ${stats.level} adapting...`);
   };
 
-  const cellSize = isTouch
+  const targetCell = isTouch
     ? variant.size <= 3
       ? 104
       : variant.size === 4
@@ -1415,6 +1434,10 @@ function XOGame({
       : variant.size === 4
         ? 72
         : 58;
+  const boardMaxWidth = Math.min(isTouch ? viewportWidth - 40 : viewportWidth - 140, isTouch ? 460 : 680);
+  const computedCell = Math.floor((boardMaxWidth - (variant.size - 1) * 8 - 18) / variant.size);
+  const minCell = variant.size <= 3 ? 54 : variant.size === 4 ? 46 : 40;
+  const cellSize = clamp(computedCell, minCell, targetCell);
   const boardWidth = variant.size * cellSize + (variant.size - 1) * 8 + 18;
 
   const toneAccent = theme === "toxic" ? "lime" : theme === "sunset" ? "amber" : "cyan";
@@ -1708,7 +1731,7 @@ function PongGame({
           ref={canvasRef}
           width={400}
           height={400}
-          className="mx-auto h-[56vh] max-h-[620px] w-auto max-w-[96vw] rounded-xl touch-none"
+          className="mx-auto h-auto w-[92vw] max-w-[384px] rounded-xl touch-none sm:h-[56vh] sm:w-auto sm:max-w-[96vw]"
           onTouchStart={(event) => {
             const touch = event.touches[0];
             if (!touch) return;
@@ -1937,7 +1960,7 @@ function BreakoutGame({ onFinish, enabled }: { onFinish: (score: number, won: bo
           ref={canvasRef}
           width={WIDTH}
           height={HEIGHT}
-          className="mx-auto h-[56vh] max-h-[620px] w-auto max-w-[96vw] rounded-xl touch-none"
+          className="mx-auto h-auto w-[92vw] max-w-[384px] rounded-xl touch-none sm:h-[56vh] sm:w-auto sm:max-w-[96vw]"
           onTouchStart={(event) => {
             const touch = event.touches[0];
             if (!touch) return;
@@ -2045,13 +2068,13 @@ function MemoryGame({
   const closedToken = cardBack === "glyph" ? "◇" : cardBack === "prism" ? "◈" : "?";
 
   const view = (
-    <div className="relative grid grid-cols-4 gap-2 p-2 sm:p-3">
+    <div className="relative mx-auto grid w-full max-w-[460px] grid-cols-4 gap-2 p-2 sm:max-w-[520px] sm:p-3">
       {cards.map((card, idx) => (
         <button
           type="button"
           key={card.id}
           onClick={() => flip(idx)}
-          className={`grid h-[21vw] max-h-[96px] min-h-[72px] w-[21vw] max-w-[96px] min-w-[72px] place-items-center rounded-xl border text-sm font-semibold transition ${
+          className={`grid aspect-square w-full place-items-center rounded-xl border text-sm font-semibold transition ${
             card.open || card.matched
               ? "border-cyan-300/55 bg-cyan-400/15 text-cyan-100 shadow-[0_0_12px_rgba(34,211,238,0.35)]"
               : closedClass
@@ -2432,6 +2455,15 @@ export function PXPlayClient() {
     return null;
   })();
 
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const active = activeGame !== null;
+    document.body.classList.toggle("px-play-game-active", active);
+    return () => {
+      document.body.classList.remove("px-play-game-active");
+    };
+  }, [activeGame]);
+
   const skins: Record<GameId, GameSkin> = {
     snake: {
       frameClass: "border-lime-300/35 bg-gradient-to-b from-lime-700/35 via-lime-900/35 to-slate-950",
@@ -2609,7 +2641,7 @@ export function PXPlayClient() {
           </article>
         </section>
       ) : current ? (
-        <div ref={gameFrameRef} className="px-game-full-target w-full min-h-[88dvh] sm:min-h-0">
+        <div ref={gameFrameRef} className="px-game-full-target w-full pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <GameFrame
             title={current.title}
             stats={current.stats}

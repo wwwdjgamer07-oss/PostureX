@@ -195,7 +195,7 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
 
   return (
     <div className={`px-shell grid gap-6 lg:grid-cols-[220px_1fr] ${layout.compact ? "text-[0.94rem]" : ""}`}>
-      <aside className="px-dashboard-sidebar px-panel animate-fade-slide-right sticky top-24 h-fit p-3">
+      <aside className="px-dashboard-sidebar px-panel animate-fade-slide-right h-fit p-3 lg:sticky lg:top-24">
         <div className="mb-4 rounded-2xl border border-cyan-300/30 bg-cyan-400/10 p-3">
           <p className="text-xs uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-200">PostureX Core</p>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Operator ID</p>

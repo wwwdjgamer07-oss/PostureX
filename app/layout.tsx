@@ -72,7 +72,7 @@ export default function RootLayout({
         <DailyReminderScheduler />
         <Navbar />
         <Toaster richColors theme="dark" position="top-right" />
-        <main className="app-root min-h-dvh flex flex-col px-4 pt-20 pb-10">{children}</main>
+        <main className="app-root min-h-dvh flex flex-col px-4 pt-20 pb-[calc(env(safe-area-inset-bottom)+6rem)] sm:pb-10">{children}</main>
         <GlobalChatbot />
       </body>
     </html>

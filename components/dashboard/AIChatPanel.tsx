@@ -261,14 +261,14 @@ export function AIChatPanel({
     <aside
       className={cn(
         mode === "floating"
-          ? "fixed bottom-24 right-6 top-24 z-40 w-[380px]"
+          ? "fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] right-3 top-[calc(env(safe-area-inset-top)+5rem)] z-40 w-[min(94vw,380px)] sm:right-6 sm:w-[min(92vw,380px)]"
           : "relative w-full",
         "transition-transform duration-300",
-        mode === "floating" && !isOpen ? "translate-x-[420px] pointer-events-none opacity-0" : "translate-x-0 opacity-100"
+        mode === "floating" && !isOpen ? "translate-x-[105%] pointer-events-none opacity-0" : "translate-x-0 opacity-100"
       )}
       aria-hidden={mode === "floating" ? !isOpen : false}
     >
-      <div className="px-ai-chat-panel px-panel flex h-full min-h-[560px] flex-col overflow-hidden border-cyan-300/35 shadow-[0_0_35px_rgba(34,211,238,0.16)]">
+      <div className="px-ai-chat-panel px-panel flex h-full min-h-0 flex-col overflow-hidden border-cyan-300/35 shadow-[0_0_35px_rgba(34,211,238,0.16)]">
         <header className="border-b border-slate-500/25 p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
