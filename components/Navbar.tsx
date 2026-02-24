@@ -127,9 +127,9 @@ export function Navbar() {
             ) : "PX"}
           </div>
           <div className="hidden sm:block">
-            <p className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">PostureX</p>
+            <p className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">PX</p>
             <p className={cn("text-[10px] uppercase tracking-[0.22em] text-slate-600 dark:text-slate-400", isObsidianSkull ? "text-violet-300 dark:text-violet-200/85" : "")}>
-              {isObsidianSkull ? "Obsidian Skull Edition" : "Posture Intelligence Engine"}
+              {isObsidianSkull ? "Obsidian Skull Edition" : "PX Intelligence Engine"}
             </p>
           </div>
         </Link>

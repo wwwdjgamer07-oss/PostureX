@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "PostureX",
-    short_name: "PostureX",
+    name: "PX",
+    short_name: "PX",
     description: "AI posture intelligence & PX Play arcade",
     start_url: "/",
     display: "standalone",
