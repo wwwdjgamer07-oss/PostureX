@@ -38,12 +38,13 @@ export default function AIGamesPage() {
 
   return (
     <div className="px-shell space-y-5 pb-12">
-      <section className="flex items-center justify-between rounded-2xl border border-cyan-300/30 bg-slate-900/55 px-5 py-4 backdrop-blur-xl">
+      <section className="flex flex-col gap-3 rounded-2xl border border-cyan-300/30 bg-slate-900/55 px-4 py-4 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-cyan-300">
           <Gamepad2 className="h-4 w-4" />
           PX Posture Arena
         </p>
-        <div className="inline-flex rounded-xl border border-slate-500/30 bg-slate-900/55 p-1">
+        <div className="w-full overflow-x-auto sm:w-auto">
+        <div className="inline-flex min-w-max rounded-xl border border-slate-500/30 bg-slate-900/55 p-1">
           {([
             ["balance", "Balance Beam"],
             ["slouch", "Anti-Slouch"],
@@ -61,9 +62,10 @@ export default function AIGamesPage() {
             </button>
           ))}
         </div>
+        </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {(Object.keys(GAME_META) as GameKey[]).map((key) => {
           const game = GAME_META[key];
           const selected = activeGame === key;

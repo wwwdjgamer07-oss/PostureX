@@ -205,7 +205,7 @@ function GameShell({
           : "text-rose-200";
 
   return (
-    <div className="relative min-h-[76vh] overflow-hidden rounded-[2rem] border border-cyan-300/30 bg-[#040916]">
+    <div className="relative min-h-[68vh] overflow-hidden rounded-[1.5rem] border border-cyan-300/30 bg-[#040916] sm:min-h-[76vh] sm:rounded-[2rem]">
       <div className="pointer-events-none absolute inset-0 px-game-grid opacity-35" />
       <div className="pointer-events-none absolute inset-0 px-game-vignette" />
       <div className="pointer-events-none absolute inset-0">
@@ -217,7 +217,7 @@ function GameShell({
 
       <video ref={videoRef} className="absolute inset-0 h-full w-full object-cover opacity-[0.14]" muted playsInline />
 
-      <div className="relative z-10 flex h-full min-h-[76vh] flex-col items-center justify-between px-6 py-8">
+      <div className="relative z-10 flex h-full min-h-[68vh] flex-col items-center justify-between px-4 py-5 sm:min-h-[76vh] sm:px-6 sm:py-8">
         <div className="w-full max-w-4xl">
           <div className="flex items-center justify-between text-xs uppercase tracking-[0.2em] text-slate-400">
             <span>Stability {hud.stabilityTime.toFixed(1)}s</span>
@@ -228,8 +228,8 @@ function GameShell({
           </div>
         </div>
 
-        <div className="relative flex h-[480px] w-full max-w-5xl items-center justify-center">
-          <div className="absolute right-3 top-4 rounded-xl border border-cyan-300/30 bg-slate-900/50 px-4 py-2 text-sm text-cyan-100 backdrop-blur-xl">
+        <div className="relative flex h-[280px] w-full max-w-5xl items-center justify-center sm:h-[380px] lg:h-[480px]">
+          <div className="absolute right-2 top-2 rounded-xl border border-cyan-300/30 bg-slate-900/50 px-3 py-1.5 text-xs text-cyan-100 backdrop-blur-xl sm:right-3 sm:top-4 sm:px-4 sm:py-2 sm:text-sm">
             Streak: {Math.max(0, Math.round(hud.streak ?? 0))}
           </div>
           {children}
@@ -243,7 +243,7 @@ function GameShell({
             </div>
           ) : null}
 
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <button
               type="button"
               disabled={loading || running}

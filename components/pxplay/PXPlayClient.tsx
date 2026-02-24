@@ -634,7 +634,7 @@ function SnakeGame({
         />
         </div>
         {isTouch ? (
-          <div className="absolute left-0 right-0 bottom-0 pb-[env(safe-area-inset-bottom)] p-3 grid grid-cols-3 gap-3 bg-black/40 backdrop-blur-xl">
+          <div className="absolute bottom-0 left-0 right-0 grid grid-cols-3 gap-2 bg-black/40 p-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl sm:gap-3 sm:p-3">
             <span />
             <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-3 text-cyan-100" onClick={() => setDirection(0, -1)}>Up</button>
             <span />
@@ -967,7 +967,7 @@ function LanderGame({
           <canvas ref={canvasRef} className="absolute inset-0 h-full w-full rounded-none touch-none" />
         </div>
         {isTouch ? (
-          <div className="absolute left-0 right-0 bottom-0 pb-[env(safe-area-inset-bottom)] p-3 grid grid-cols-3 gap-2 bg-black/40 backdrop-blur-xl">
+          <div className="absolute bottom-0 left-0 right-0 grid grid-cols-3 gap-2 bg-black/40 p-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl sm:p-3">
             <button
               type="button"
               className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-3 text-cyan-100"
@@ -1647,7 +1647,7 @@ function PongGame({
         />
         </div>
         {isTouch ? (
-          <div className="absolute left-0 right-0 bottom-0 pb-[env(safe-area-inset-bottom)] p-3 grid grid-cols-2 gap-2 bg-black/40 backdrop-blur-xl">
+          <div className="absolute bottom-0 left-0 right-0 grid grid-cols-2 gap-2 bg-black/40 p-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl sm:p-3">
             <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-2 text-cyan-100" onClick={() => { playerY.current = clamp(playerY.current - 28, 0, ARENA_H - PADDLE_H); }}>Up</button>
             <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-2 text-cyan-100" onClick={() => { playerY.current = clamp(playerY.current + 28, 0, ARENA_H - PADDLE_H); }}>Down</button>
           </div>
@@ -1885,7 +1885,7 @@ function BreakoutGame({ onFinish, enabled }: { onFinish: (score: number, won: bo
         />
         </div>
         {isTouch ? (
-          <div className="absolute left-0 right-0 bottom-0 pb-[env(safe-area-inset-bottom)] p-3 grid grid-cols-2 gap-2 bg-black/40 backdrop-blur-xl">
+          <div className="absolute bottom-0 left-0 right-0 grid grid-cols-2 gap-2 bg-black/40 p-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl sm:p-3">
             <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-2 text-cyan-100" onClick={() => { paddleX.current = clamp(paddleX.current - 26, LEFT_WALL + 2, RIGHT_WALL - paddleW.current - 2); }}>Left</button>
             <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-2 text-cyan-100" onClick={() => { paddleX.current = clamp(paddleX.current + 26, LEFT_WALL + 2, RIGHT_WALL - paddleW.current - 2); }}>Right</button>
           </div>
@@ -2399,7 +2399,7 @@ export function PXPlayClient() {
 
   return (
     <div className={`px-play-shell px-shell ${current ? "space-y-2 pb-3" : "space-y-6 pb-12"}`}>
-      {!current ? <section className="px-panel p-6 sm:p-8">
+      {!current ? <section className="px-panel p-4 sm:p-8">
         <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-cyan-300">
           {isObsidianSkull ? <SkullJoystickIcon className="h-4 w-4" /> : <Gamepad2 className="h-4 w-4" />}
           PX Play Arcade
@@ -2407,7 +2407,8 @@ export function PXPlayClient() {
         <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white sm:text-4xl">PX Play</h1>
         <p className="mt-2 max-w-4xl text-sm text-slate-600 dark:text-slate-300">Classic arcade + AI casual games in a neon PX mini arcade.</p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <div className="inline-flex rounded-xl border border-slate-500/30 bg-slate-900/50 p-1">
+          <div className="w-full overflow-x-auto sm:w-auto">
+          <div className="inline-flex min-w-max rounded-xl border border-slate-500/30 bg-slate-900/50 p-1">
             <button
               type="button"
               onClick={() => setViewMode("games")}
@@ -2427,10 +2428,11 @@ export function PXPlayClient() {
               PX Rewards
             </button>
           </div>
+          </div>
           <button
             type="button"
             onClick={() => setStrictMode((prev) => !prev)}
-            className={`rounded-xl border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] transition ${
+            className={`w-full rounded-xl border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] transition sm:w-auto ${
               strictMode
                 ? "border-rose-300/45 bg-rose-500/15 text-rose-100"
                 : "border-slate-500/30 bg-slate-900/50 text-slate-300 hover:text-slate-100"
@@ -2438,7 +2440,8 @@ export function PXPlayClient() {
           >
             Strict Mode: {strictMode ? "On" : "Off"}
           </button>
-          <div className="inline-flex rounded-xl border border-slate-500/30 bg-slate-900/50 p-1">
+          <div className="w-full overflow-x-auto sm:w-auto">
+          <div className="inline-flex min-w-max rounded-xl border border-slate-500/30 bg-slate-900/50 p-1">
           {inventory.themesUnlocked.map((key) => (
             <button
               key={key}
@@ -2451,6 +2454,7 @@ export function PXPlayClient() {
               {themeMeta[key].label}
             </button>
           ))}
+          </div>
           </div>
         </div>
         {strictMode ? (
@@ -2540,7 +2544,7 @@ export function PXPlayClient() {
           />
         </div>
       ) : (
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {tiles.map((tile, index) => {
             const Icon = tile.icon;
             return (
@@ -2590,8 +2594,8 @@ export function PXPlayClient() {
       )}
 
       {rewardPopup ? (
-        <div className="px-reward-popup fixed inset-0 z-50 grid place-items-center bg-slate-950/70 backdrop-blur-[2px]">
-          <div className="px-reward-popup-card relative w-full max-w-lg overflow-hidden rounded-3xl border border-cyan-300/40 bg-gradient-to-b from-slate-900 via-blue-950 to-slate-950 p-6 shadow-[0_0_90px_rgba(34,211,238,0.25)]">
+        <div className="px-reward-popup fixed inset-0 z-50 grid place-items-center bg-slate-950/70 p-3 backdrop-blur-[2px] sm:p-4">
+          <div className="px-reward-popup-card relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-cyan-300/40 bg-gradient-to-b from-slate-900 via-blue-950 to-slate-950 p-4 shadow-[0_0_90px_rgba(34,211,238,0.25)] sm:p-6">
             <div className="pointer-events-none absolute inset-0">
               {Array.from({ length: 44 }, (_, i) => (
                 <span
@@ -2605,7 +2609,7 @@ export function PXPlayClient() {
               {rewardPopup.won ? "Victory Rewards" : "Round Complete"}
             </h3>
             <p className="relative mt-1 text-center text-xs uppercase tracking-[0.18em] text-slate-300">{rewardPopup.game.toUpperCase()} complete</p>
-            <div className="relative mt-5 grid grid-cols-2 gap-3">
+            <div className="relative mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="rounded-xl border border-amber-300/40 bg-amber-400/10 p-3 text-center">
                 <Coins className="mx-auto h-6 w-6 text-amber-300" />
                 <p className="mt-1 text-sm text-amber-100">+{rewardPopup.rewards.coins} PX Coins</p>
@@ -2624,7 +2628,7 @@ export function PXPlayClient() {
               {rewardPopup.rewards.notes.length ? <p className="text-slate-300">Triggers: {rewardPopup.rewards.notes.join(", ")}</p> : null}
               {!rewardPopup.won ? <p className="text-rose-200">Tip: Watch timing and keep steady rhythm to push your streak.</p> : null}
             </div>
-            <div className="relative mt-6 flex justify-center gap-3">
+            <div className="relative mt-6 grid grid-cols-1 gap-3 sm:flex sm:justify-center">
               <button
                 type="button"
                 onClick={() => {

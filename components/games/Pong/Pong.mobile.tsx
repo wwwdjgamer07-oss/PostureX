@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 type PongMobileProps = {
   onExit?: () => void;
 };
-const CANVAS_RESOLUTION_SCALE = 0.72;
+const MAX_DPR = 2;
 
 export default function PongMobile({ onExit }: PongMobileProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -24,10 +24,11 @@ export default function PongMobile({ onExit }: PongMobileProps) {
     const resize = () => {
       const width = container.clientWidth;
       const height = container.clientHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
-      canvas.width = Math.max(1, Math.floor(width * CANVAS_RESOLUTION_SCALE));
-      canvas.height = Math.max(1, Math.floor(height * CANVAS_RESOLUTION_SCALE));
+      canvas.width = Math.max(1, Math.floor(width * dpr));
+      canvas.height = Math.max(1, Math.floor(height * dpr));
     };
     resize();
     const obs = new ResizeObserver(resize);
@@ -41,6 +42,7 @@ export default function PongMobile({ onExit }: PongMobileProps) {
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
+      ctx.imageSmoothingEnabled = false;
 
       const dt = 1 / 60;
       const w = canvas.width;
@@ -86,7 +88,8 @@ export default function PongMobile({ onExit }: PongMobileProps) {
       ctx.clearRect(0, 0, w, h);
       ctx.fillStyle = "#020617";
       ctx.fillRect(0, 0, w, h);
-      ctx.strokeStyle = "rgba(34,211,238,0.22)";
+
+      ctx.strokeStyle = "rgba(34,211,238,0.24)";
       ctx.setLineDash([8, 10]);
       ctx.beginPath();
       ctx.moveTo(w / 2, 0);
@@ -103,7 +106,7 @@ export default function PongMobile({ onExit }: PongMobileProps) {
       ctx.fill();
 
       ctx.fillStyle = "#a5f3fc";
-      ctx.font = "600 18px sans-serif";
+      ctx.font = "600 18px ui-sans-serif, system-ui, sans-serif";
       ctx.textAlign = "center";
       ctx.fillText(`${score.you} : ${score.ai}`, w / 2, 28);
 
@@ -129,7 +132,7 @@ export default function PongMobile({ onExit }: PongMobileProps) {
 
   return (
     <div className="fixed inset-0 flex min-h-[100dvh] flex-col bg-[#020617] text-white">
-      <div className="h-12 flex items-center justify-between border-b border-cyan-500/20 px-3">
+      <div className="flex h-12 items-center justify-between border-b border-cyan-500/20 px-3">
         <span className="text-sm tracking-widest">PONG</span>
         <button
           type="button"
@@ -146,11 +149,11 @@ export default function PongMobile({ onExit }: PongMobileProps) {
 
       <div className="space-y-2 border-t border-cyan-400/20 bg-white/5 p-3 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
         <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={moveUp} className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-3">
-            ↑
+          <button type="button" onClick={moveUp} className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-3 text-sm font-semibold">
+            Up
           </button>
-          <button type="button" onClick={moveDown} className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-3">
-            ↓
+          <button type="button" onClick={moveDown} className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-3 text-sm font-semibold">
+            Down
           </button>
         </div>
       </div>

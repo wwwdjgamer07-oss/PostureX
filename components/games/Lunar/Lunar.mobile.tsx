@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 type LunarMobileProps = {
   onExit?: () => void;
 };
-const CANVAS_RESOLUTION_SCALE = 0.72;
+const MAX_DPR = 2;
 
 export default function LunarMobile({ onExit }: LunarMobileProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -22,10 +22,11 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
     const resize = () => {
       const width = container.clientWidth;
       const height = container.clientHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
-      canvas.width = Math.max(1, Math.floor(width * CANVAS_RESOLUTION_SCALE));
-      canvas.height = Math.max(1, Math.floor(height * CANVAS_RESOLUTION_SCALE));
+      canvas.width = Math.max(1, Math.floor(width * dpr));
+      canvas.height = Math.max(1, Math.floor(height * dpr));
     };
     resize();
     const obs = new ResizeObserver(resize);
@@ -39,6 +40,7 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
+      ctx.imageSmoothingEnabled = false;
 
       const dt = 1 / 60;
       const w = canvas.width;
@@ -68,9 +70,10 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
       }
 
       ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = "#000";
+      ctx.fillStyle = "#020617";
       ctx.fillRect(0, 0, w, h);
-      ctx.strokeStyle = "#9ca3af";
+
+      ctx.strokeStyle = "#94a3b8";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(0, ground + 18);
@@ -82,7 +85,7 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
       ctx.save();
       ctx.translate(shipRef.current.x, shipRef.current.y);
       ctx.rotate(shipRef.current.angle);
-      ctx.strokeStyle = "#f1f5f9";
+      ctx.strokeStyle = "#e2e8f0";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(0, -12);
@@ -101,7 +104,7 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
       ctx.restore();
 
       ctx.fillStyle = "#e5e7eb";
-      ctx.font = "600 16px sans-serif";
+      ctx.font = "600 16px ui-sans-serif, system-ui, sans-serif";
       ctx.fillText(`Fuel: ${Math.round(fuel)}`, 12, 24);
       ctx.fillText(`V-Speed: ${Math.round(shipRef.current.vy)}`, 12, 44);
 
@@ -120,7 +123,7 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
 
   return (
     <div className="fixed inset-0 flex min-h-[100dvh] flex-col bg-[#020617] text-white">
-      <div className="h-12 flex items-center justify-between border-b border-cyan-500/20 px-3">
+      <div className="flex h-12 items-center justify-between border-b border-cyan-500/20 px-3">
         <span className="text-sm tracking-widest">LUNAR LANDER</span>
         <button
           type="button"
@@ -142,16 +145,16 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
             onTouchStart={() => hold("left", true)}
             onTouchEnd={() => hold("left", false)}
             onTouchCancel={() => hold("left", false)}
-            className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-3"
+            className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-3 text-sm font-semibold"
           >
-            Rotate Left
+            Left
           </button>
           <button
             type="button"
             onTouchStart={() => hold("thrust", true)}
             onTouchEnd={() => hold("thrust", false)}
             onTouchCancel={() => hold("thrust", false)}
-            className="rounded-2xl border border-cyan-400/30 bg-cyan-500/20 p-3 shadow-[0_0_24px_rgba(34,211,238,0.2)]"
+            className="rounded-2xl border border-cyan-400/30 bg-cyan-500/20 p-3 text-sm font-semibold shadow-[0_0_24px_rgba(34,211,238,0.2)]"
           >
             Thrust
           </button>
@@ -160,9 +163,9 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
             onTouchStart={() => hold("right", true)}
             onTouchEnd={() => hold("right", false)}
             onTouchCancel={() => hold("right", false)}
-            className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-3"
+            className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-3 text-sm font-semibold"
           >
-            Rotate Right
+            Right
           </button>
         </div>
       </div>
