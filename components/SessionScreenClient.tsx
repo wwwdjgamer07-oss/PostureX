@@ -324,10 +324,7 @@ export function SessionScreenClient() {
       </header>
 
       <div className="space-y-4">
-        <section
-          className="sticky top-[calc(env(safe-area-inset-top)+4.25rem)] z-20 space-y-4 px-reveal md:static"
-          style={{ animationDelay: "120ms" }}
-        >
+        <section className="space-y-4 px-reveal" style={{ animationDelay: "120ms" }}>
           {resolvedSource === "camera" ? (
             <CameraSession
               onMetrics={(next) => {
