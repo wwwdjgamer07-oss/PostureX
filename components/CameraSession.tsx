@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, PlayCircle, Square, Video } from "lucide-react";
+import { AlertTriangle, Maximize2, Minimize2, PlayCircle, Square, Video } from "lucide-react";
 import { CoachingBubble } from "@/components/CoachingBubble";
 import { LandmarkOverlay } from "@/components/LandmarkOverlay";
 import { PostureAlert } from "@/components/PostureAlert";
@@ -103,6 +103,8 @@ export function CameraSession({
   const [activeBreakRecommendation, setActiveBreakRecommendation] = useState<BreakRecommendation | null>(null);
   const [breakCountdownSeconds, setBreakCountdownSeconds] = useState<number | null>(null);
   const [coachingMetrics, setCoachingMetrics] = useState<PostureCoachingMetrics | null>(null);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [mobileFullscreen, setMobileFullscreen] = useState(false);
   const { feedback: coachingFeedback, tips: coachingTips } = usePostureCoaching(coachingMetrics);
 
   const buttonLabel = useMemo(() => {
@@ -117,6 +119,27 @@ export function CameraSession({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const query = window.matchMedia("(max-width: 1024px)");
+    const sync = () => setIsMobileViewport(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => {
+      query.removeEventListener("change", sync);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (running && isMobileViewport) {
+      setMobileFullscreen(true);
+      return;
+    }
+    if (!running) {
+      setMobileFullscreen(false);
+    }
+  }, [isMobileViewport, running]);
 
   function getSessionErrorMessage(errorValue: unknown): string {
     if (errorValue instanceof DOMException) {
@@ -591,16 +614,34 @@ export function CameraSession({
   }
 
   return (
-    <div className="px-panel w-full overflow-hidden p-3 sm:p-5">
-      <div className="mb-3 flex items-center justify-between sm:mb-4">
+    <div
+      className={
+        mobileFullscreen
+          ? "fixed inset-0 z-[90] flex min-h-[100dvh] w-full flex-col overflow-hidden bg-slate-950 p-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))]"
+          : "px-panel w-full overflow-hidden p-3 sm:p-5"
+      }
+    >
+      <div className={`mb-3 flex items-center justify-between ${mobileFullscreen ? "rounded-xl border border-slate-700/60 bg-slate-900/70 px-3 py-2" : "sm:mb-4"}`}>
         <div className="flex items-center gap-2 text-slate-700 dark:text-slate-100">
           <Video className="h-4 w-4 text-cyan-300" />
           <p className="text-sm font-medium">Live Camera</p>
         </div>
-        <p className="rounded-full border border-slate-300/50 bg-white/75 px-3 py-1 text-xs text-slate-700 dark:border-slate-500/30 dark:bg-slate-900/70 dark:text-slate-300">{elapsed}s</p>
+        <div className="flex items-center gap-2">
+          <p className="rounded-full border border-slate-300/50 bg-white/75 px-3 py-1 text-xs text-slate-700 dark:border-slate-500/30 dark:bg-slate-900/70 dark:text-slate-300">{elapsed}s</p>
+          {running && isMobileViewport ? (
+            <button
+              type="button"
+              onClick={() => setMobileFullscreen((previous) => !previous)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-300/45 bg-slate-900/75 text-cyan-200"
+              aria-label={mobileFullscreen ? "Minimize live camera view" : "Expand live camera view"}
+            >
+              {mobileFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </button>
+          ) : null}
+        </div>
       </div>
 
-      <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-cyan-300/25 bg-slate-950">
+      <div className={`relative w-full overflow-hidden rounded-2xl border border-cyan-300/25 bg-slate-950 ${mobileFullscreen ? "min-h-0 flex-1" : "aspect-video"}`}>
         <video ref={videoRef} className="h-full w-full object-cover" muted playsInline autoPlay />
         {!running ? (
           <div className="pointer-events-none absolute inset-0 grid place-items-center px-4 text-center">
@@ -643,7 +684,11 @@ export function CameraSession({
 
       <button
         type="button"
-        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/45 bg-gradient-to-r from-blue-500 to-cyan-500 px-4 py-3 text-base font-semibold text-white transition hover:shadow-[0_12px_28px_rgba(34,211,238,0.25)] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-4 sm:py-2.5 sm:text-sm"
+        className={`mt-4 inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300/45 bg-gradient-to-r from-blue-500 to-cyan-500 font-semibold text-white transition hover:shadow-[0_12px_28px_rgba(34,211,238,0.25)] disabled:cursor-not-allowed disabled:opacity-60 ${
+          mobileFullscreen
+            ? "w-full px-4 py-3 text-base"
+            : "w-full px-4 py-3 text-base sm:w-auto sm:px-4 sm:py-2.5 sm:text-sm"
+        }`}
         onClick={() => {
           if (running) {
             stopSession(true);
