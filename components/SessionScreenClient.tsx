@@ -373,7 +373,7 @@ export function SessionScreenClient() {
         <section className="space-y-4">
           <CoachAvatarBubble message={coachMessage} />
 
-          <article className="px-panel px-reveal px-hover-lift p-5" style={{ animationDelay: "220ms" }}>
+          <article className="px-panel px-reveal px-hover-lift bg-slate-950/95 p-5 backdrop-blur-none md:bg-transparent md:backdrop-blur-xl" style={{ animationDelay: "220ms" }}>
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Posture Score</p>
               <Video className="h-4 w-4 text-cyan-300" />
@@ -386,7 +386,7 @@ export function SessionScreenClient() {
             </div>
           </article>
 
-          <article className="px-panel px-reveal px-hover-lift p-5" style={{ animationDelay: "300ms" }}>
+          <article className="px-panel px-reveal px-hover-lift bg-slate-950/95 p-5 backdrop-blur-none md:bg-transparent md:backdrop-blur-xl" style={{ animationDelay: "300ms" }}>
             <p className="text-sm font-semibold text-slate-900 dark:text-white">Risk Status</p>
             <div className={`mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${riskTone[metrics.riskLevel]}`}>
               {metrics.riskLevel}
@@ -398,7 +398,7 @@ export function SessionScreenClient() {
             </div>
           </article>
 
-          <article className="px-panel px-reveal px-hover-lift p-5" style={{ animationDelay: "380ms" }}>
+          <article className="px-panel px-reveal px-hover-lift bg-slate-950/95 p-5 backdrop-blur-none md:bg-transparent md:backdrop-blur-xl" style={{ animationDelay: "380ms" }}>
             <p className="text-sm font-semibold text-slate-900 dark:text-white">Session Timer</p>
             <p className="mt-3 inline-flex items-center gap-2 text-2xl font-semibold text-cyan-200">
               <Timer className="h-5 w-5" />
@@ -415,7 +415,7 @@ export function SessionScreenClient() {
             <DevicePostureGauge pitch={latestSensorFrame.pitch} roll={latestSensorFrame.roll} stability={latestSensorFrame.stability} />
           ) : null}
 
-          <article className="px-panel px-reveal px-hover-lift p-5" style={{ animationDelay: "460ms" }}>
+          <article className="px-panel px-reveal px-hover-lift bg-slate-950/95 p-5 backdrop-blur-none md:bg-transparent md:backdrop-blur-xl" style={{ animationDelay: "460ms" }}>
             <p className="inline-flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
               <ShieldAlert className="h-4 w-4 text-cyan-300" />
               Control Notes

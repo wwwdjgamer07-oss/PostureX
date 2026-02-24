@@ -6,7 +6,7 @@ interface CoachAvatarBubbleProps {
 
 export function CoachAvatarBubble({ message }: CoachAvatarBubbleProps) {
   return (
-    <article className="px-panel px-reveal p-4" style={{ animationDelay: "180ms" }}>
+    <article className="px-panel px-reveal bg-slate-950/95 p-4 backdrop-blur-none md:bg-transparent md:backdrop-blur-xl" style={{ animationDelay: "180ms" }}>
       <div className="flex items-start gap-3">
         <div className="grid h-12 w-12 place-items-center rounded-full border border-cyan-300/45 bg-cyan-400/15 text-sm font-semibold text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.22)]">
           PX
