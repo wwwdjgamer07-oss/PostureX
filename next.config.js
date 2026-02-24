@@ -91,6 +91,7 @@ if (isProd) {
     disable: false,
     register: true,
     skipWaiting: true,
+    customWorkerDir: "worker",
     fallbacks: {
       document: "/offline"
     }
