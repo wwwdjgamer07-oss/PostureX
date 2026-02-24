@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -125,16 +124,7 @@ export function Navbar() {
           )}>
             {isObsidianSkull ? (
               <img src="/skull1.jpeg" alt="Obsidian Skull logo" className="h-full w-full rounded-md object-cover" />
-            ) : (
-              <Image
-                src="/icon.svg"
-                alt="PostureX logo"
-                width={18}
-                height={18}
-                className="h-[18px] w-[18px]"
-                priority
-              />
-            )}
+            ) : "PX"}
           </div>
           <div className="hidden sm:block">
             <p className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">PostureX</p>
