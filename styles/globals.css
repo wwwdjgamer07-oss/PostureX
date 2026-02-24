@@ -32,9 +32,12 @@ body {
   padding: 0;
   background: #06080f;
   color: #eaf2ff;
+  height: 100%;
   min-height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   overscroll-behavior-y: auto;
 }
 
@@ -122,7 +125,8 @@ div {
     min-height: 100dvh;
     background: transparent;
     overflow-x: hidden;
-    overflow-y: visible;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: auto;
   }
 
@@ -851,16 +855,30 @@ html[data-ui-skin="px-elite"] .px-panel {
 @media (max-width: 768px) {
   body {
     background-attachment: scroll;
-    overscroll-behavior-y: none;
+    overscroll-behavior-y: auto;
   }
 
   .app-root {
-    overscroll-behavior-y: contain;
+    overscroll-behavior-y: auto;
   }
 
   body.px-play-game-active .px-global-chat-trigger-wrap,
   body.px-play-game-active .px-global-chat-wrap {
     display: none;
+  }
+}
+
+@media (display-mode: standalone) {
+  html,
+  body {
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow-y: auto;
+  }
+
+  .app-root {
+    min-height: 100dvh;
+    overflow-y: auto;
   }
 }
 

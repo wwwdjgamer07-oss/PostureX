@@ -123,12 +123,12 @@ export function PostureXHeroAnimation() {
               Live tracking, fatigue warnings, and coaching insights in one streamlined performance cockpit.
             </p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              <StartFreeButton className="px-hero-cta-primary inline-flex items-center gap-2 rounded-xl border border-cyan-400/50 bg-cyan-400/18 px-5 py-3 text-sm font-semibold text-slate-900 shadow-[0_0_28px_rgba(34,211,238,0.22)] dark:border-cyan-200/40 dark:bg-cyan-400/20 dark:text-white dark:shadow-[0_0_28px_rgba(34,211,238,0.3)] disabled:opacity-60">
-                Start Free <ChevronRight className="h-4 w-4" />
-              </StartFreeButton>
               <Link href="/dashboard" className="px-hero-cta-secondary rounded-xl border border-slate-300/70 bg-white/72 px-5 py-3 text-sm font-semibold text-slate-800 dark:border-white/25 dark:bg-white/5 dark:text-white">
-                View Demo
+                Main Menu
               </Link>
+              <StartFreeButton className="px-hero-cta-primary inline-flex items-center gap-2 rounded-xl border border-cyan-400/50 bg-cyan-400/18 px-5 py-3 text-sm font-semibold text-slate-900 shadow-[0_0_28px_rgba(34,211,238,0.22)] dark:border-cyan-200/40 dark:bg-cyan-400/20 dark:text-white dark:shadow-[0_0_28px_rgba(34,211,238,0.3)] disabled:opacity-60">
+                View Plans <ChevronRight className="h-4 w-4" />
+              </StartFreeButton>
             </div>
           </motion.div>
 
