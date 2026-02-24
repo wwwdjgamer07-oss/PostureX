@@ -27,6 +27,7 @@ import { SensorPostureEngine, type SensorPostureFrame } from "@/lib/posture/sens
 import type { CameraPermissionStatus } from "@/components/CameraSession";
 import type { PostureMetrics } from "@/lib/postureEngine";
 import { detectMobile, hasMobileSensorSupport, requestSensorPermission } from "@/lib/mobileSensor";
+import { PostureAlertManager, type ManagedPostureType } from "@/lib/postureAlertManager";
 import { toast } from "sonner";
 
 interface SensorSessionProps {
@@ -43,9 +44,6 @@ interface SensorSessionProps {
 }
 
 type SensorAlertType = "forward_head" | "slouch" | "shoulder" | "stability";
-
-const SENSOR_ALERT_COOLDOWN_MS = 3000;
-const SENSOR_VIOLATION_MS = 1000;
 
 const riskFromScore = (score: number): PostureMetrics["riskLevel"] => {
   if (score >= 80) return "LOW";
@@ -85,11 +83,9 @@ export function SensorSession({
   const userIdRef = useRef<string | null>(null);
   const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
   const sensorAlertStateRef = useRef<{
-    firstDetectedAt: Partial<Record<SensorAlertType, number>>;
-    lastTriggeredAt: number;
+    manager: PostureAlertManager;
   }>({
-    firstDetectedAt: {},
-    lastTriggeredAt: 0
+    manager: new PostureAlertManager()
   });
 
   const [running, setRunning] = useState(false);
@@ -230,40 +226,29 @@ export function SensorSession({
   }
 
   function resolveSensorAlert(frame: SensorPostureFrame, now: number): { type: SensorAlertType; message: string } | null {
-    const active: SensorAlertType[] = [];
-    if (frame.forwardLean) active.push("forward_head");
-    if (frame.slouch) active.push("slouch");
-    if (frame.sideTilt) active.push("shoulder");
-    if (frame.unstable) active.push("stability");
+    const manager = sensorAlertStateRef.current.manager;
+    manager.pushSample({
+      ts: now,
+      forward_head: frame.forwardLean ? 1 : 0,
+      slouch: frame.slouch ? 1 : 0,
+      shoulder_raise: frame.sideTilt ? 1 : 0,
+      tilt: frame.unstable ? 1 : 0
+    });
+    const triggered = manager.evaluate(now, {
+      forward_head: 0.7,
+      slouch: 0.7,
+      shoulder_raise: 0.7,
+      tilt: 0.7
+    });
+    if (!triggered) return null;
 
-    const priority: SensorAlertType[] = ["slouch", "forward_head", "shoulder", "stability"];
-    for (const type of priority) {
-      if (!active.includes(type)) {
-        delete sensorAlertStateRef.current.firstDetectedAt[type];
-      }
-    }
-
-    if (now - sensorAlertStateRef.current.lastTriggeredAt < SENSOR_ALERT_COOLDOWN_MS) {
-      return null;
-    }
-
-    for (const type of priority) {
-      if (!active.includes(type)) continue;
-      if (!sensorAlertStateRef.current.firstDetectedAt[type]) {
-        sensorAlertStateRef.current.firstDetectedAt[type] = now;
-        continue;
-      }
-      if (now - (sensorAlertStateRef.current.firstDetectedAt[type] ?? now) >= SENSOR_VIOLATION_MS) {
-        sensorAlertStateRef.current.lastTriggeredAt = now;
-        sensorAlertStateRef.current.firstDetectedAt[type] = now;
-        if (type === "slouch") return { type, message: "Straighten your back" };
-        if (type === "forward_head") return { type, message: "Reduce forward lean" };
-        if (type === "shoulder") return { type, message: "Level your device tilt" };
-        return { type, message: "Hold steady posture" };
-      }
-    }
-
-    return null;
+    const mapType = (type: ManagedPostureType): SensorAlertType =>
+      type === "shoulder_raise" ? "shoulder" : type === "tilt" ? "stability" : type;
+    const type = mapType(triggered);
+    if (type === "slouch") return { type, message: "Straighten your back" };
+    if (type === "forward_head") return { type, message: "Reduce forward lean" };
+    if (type === "shoulder") return { type, message: "Level your device tilt" };
+    return { type, message: "Hold steady posture" };
   }
 
   function handleFrame(frame: SensorPostureFrame) {
@@ -304,6 +289,17 @@ export function SensorSession({
         active: true
       });
       toast.warning(nextAlert.message, { duration: 1800 });
+      void fetch("/api/push/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          type: "bad_posture",
+          title: "Bad posture detected",
+          body: nextAlert.message,
+          url: "/dashboard"
+        })
+      });
     }
 
     if (breakCountdownTimerRef.current === null && now - breakEvalAtRef.current >= getBreakEvaluationIntervalMs()) {
@@ -332,6 +328,16 @@ export function SensorSession({
         setActiveBreakRecommendation(breakRecommendation);
         onCoachEvent?.("break");
         speakBreakCue();
+        void fetch("/api/push/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            type: "break_reminder",
+            body: breakRecommendation.message,
+            url: "/dashboard"
+          })
+        });
         toast.info(breakRecommendation.message, {
           description: breakRecommendation.suggestion,
           duration: breakRecommendation.urgency === "urgent" ? 3000 : 2200
@@ -388,7 +394,7 @@ export function SensorSession({
       postureScoreHistoryRef.current = [];
       breakTakenRef.current = false;
       breakEvalAtRef.current = 0;
-      sensorAlertStateRef.current = { firstDetectedAt: {}, lastTriggeredAt: 0 };
+      sensorAlertStateRef.current = { manager: new PostureAlertManager() };
       startedAtRef.current = Date.now();
       runningRef.current = true;
       setRunning(true);
@@ -417,6 +423,16 @@ export function SensorSession({
     if (notify && startedAtRef.current) {
       const durationSeconds = Math.max(0, Math.floor((Date.now() - startedAtRef.current) / 1000));
       onSessionStop(durationSeconds, alertCountRef.current, sessionIdRef.current, breakTakenRef.current);
+      void fetch("/api/push/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          type: "session_complete",
+          body: `Session complete. Duration ${durationSeconds}s.`,
+          url: "/dashboard"
+        })
+      });
     }
 
     startedAtRef.current = null;
@@ -429,7 +445,7 @@ export function SensorSession({
     setActiveAlert(null);
     setActiveBreakRecommendation(null);
     setFallbackActive(false);
-    sensorAlertStateRef.current = { firstDetectedAt: {}, lastTriggeredAt: 0 };
+    sensorAlertStateRef.current = { manager: new PostureAlertManager() };
   }
 
   return (

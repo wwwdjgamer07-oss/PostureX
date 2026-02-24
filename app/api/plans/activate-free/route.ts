@@ -8,7 +8,15 @@ export async function POST() {
     return error;
   }
 
-  const { error: updateError } = await supabase.from("users").update({ plan_tier: "FREE" }).eq("id", user.id);
+  const { error: updateError } = await supabase
+    .from("users")
+    .update({
+      plan_tier: "FREE",
+      plan_type: "free",
+      plan_status: "expired",
+      subscription_active: false
+    })
+    .eq("id", user.id);
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message || "Failed to activate free plan." }, { status: 500 });

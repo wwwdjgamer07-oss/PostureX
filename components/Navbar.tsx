@@ -8,6 +8,7 @@ import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { AvatarMenu } from "@/components/AvatarMenu";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { NotificationBell } from "@/components/NotificationBell";
+import { StartFreeButton } from "@/components/StartFreeButton";
 import { SkullAvatarIcon, SkullBrainIcon, SkullGridIcon, SkullJoystickIcon } from "@/components/icons/SkullIcons";
 import { useIsObsidianSkullTheme } from "@/lib/personalization/usePxTheme";
 import { createClient } from "@/lib/supabase/client";
@@ -169,9 +170,12 @@ export function Navbar() {
           {!loading && user ? (
             <AvatarMenu user={user} onSignOut={signOut} />
           ) : (
-            <Link href="/auth" className="px-button-ghost py-2">
-              Sign in
-            </Link>
+            <div className="flex items-center gap-2">
+              <StartFreeButton className="px-button-ghost py-2">Start Free</StartFreeButton>
+              <Link href="/auth" className="px-button-ghost py-2">
+                Sign in
+              </Link>
+            </div>
           )}
         </div>
 
@@ -218,6 +222,7 @@ export function Navbar() {
             })}
             <div className="mt-2 flex items-center justify-end gap-2">
               {!loading && user ? <NotificationBell /> : null}
+              {!loading && !user ? <StartFreeButton className="px-button-ghost py-2">Start Free</StartFreeButton> : null}
               <DarkModeToggle />
             </div>
           </div>

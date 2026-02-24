@@ -1,6 +1,6 @@
 export type PlanTier = "FREE" | "BASIC" | "PRO";
 export type RiskLevel = "LOW" | "MODERATE" | "HIGH" | "SEVERE" | "CRITICAL";
-export type NotificationType = "info" | "success" | "warning" | "payment" | "session" | "plan";
+export type NotificationType = "info" | "success" | "warning" | "payment" | "session" | "plan" | "posture" | "break" | "report" | "reward";
 
 export interface AppNotification {
   id: string;

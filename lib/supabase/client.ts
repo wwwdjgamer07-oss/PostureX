@@ -26,7 +26,14 @@ function getSupabaseEnv() {
 
 export function createBrowserSupabaseClient() {
   const { url, anonKey } = getSupabaseEnv();
-  return createBrowserClient(url, anonKey);
+  return createBrowserClient(url, anonKey, {
+    auth: {
+      flowType: "implicit",
+      detectSessionInUrl: true,
+      persistSession: true,
+      autoRefreshToken: true
+    }
+  });
 }
 
 export const createClient = createBrowserSupabaseClient;

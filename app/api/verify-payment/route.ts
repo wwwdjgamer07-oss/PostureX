@@ -5,6 +5,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { z } from "zod";
 import { parseJsonBody, sanitizeText } from "@/lib/api/request";
 import { apiError, apiOk } from "@/lib/api/response";
+import { activatePaidPlan, isProActive } from "@/lib/subscriptionLifecycle";
 
 export const runtime = "nodejs";
 
@@ -121,6 +122,27 @@ export async function POST(request: Request) {
   const expiryIso = expiryDate.toISOString();
   const planLower = plan.toLowerCase();
 
+  const { data: membership } = await admin
+    .from("users")
+    .select("plan_type,plan_end,plan_status,subscription_active")
+    .eq("id", user.id)
+    .maybeSingle();
+  const activeMembership = isProActive({
+    planType: (membership as { plan_type?: string | null } | null)?.plan_type,
+    planEnd: (membership as { plan_end?: string | null } | null)?.plan_end,
+    planStatus: (membership as { plan_status?: string | null } | null)?.plan_status,
+    subscriptionActive: (membership as { subscription_active?: boolean | null } | null)?.subscription_active
+  });
+  if (activeMembership) {
+    return apiOk({
+      success: true,
+      plan: planTier,
+      startDate: nowIso,
+      expiryDate: (membership as { plan_end?: string | null } | null)?.plan_end ?? expiryIso,
+      redirectTo: "/dashboard"
+    });
+  }
+
   let paymentWritePromise: PromiseLike<{ error: { message?: string } | null }>;
 
   const { data: existingApproved, error: existingApprovedError } = await admin
@@ -184,8 +206,8 @@ export async function POST(request: Request) {
     }
   }
 
-  const [userUpdate, subUpdate, paymentWrite] = await Promise.all([
-    admin.from("users").update({ plan_tier: planTier }).eq("id", user.id),
+  const [planActivation, subUpdate, paymentWrite] = await Promise.all([
+    activatePaidPlan(admin, user.id, plan === "PRO_WEEKLY" ? "pro_week" : "pro_month"),
     admin.from("subscriptions").upsert(
       {
         user_id: user.id,
@@ -210,7 +232,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const dbError = userUpdate.error || paymentWrite.error;
+  const dbError = paymentWrite.error;
   if (dbError) {
     const errMessage = dbError.message || "Failed to activate subscription.";
     if (isMissingPaymentsTableError(errMessage)) {
@@ -220,9 +242,8 @@ export async function POST(request: Request) {
     }
   }
 
-  if (userUpdate.error || (subUpdate.error && !skipSubscriptionPersistence)) {
+  if (!planActivation || (subUpdate.error && !skipSubscriptionPersistence)) {
     const activationErrorMessage =
-      userUpdate.error?.message ||
       (skipSubscriptionPersistence ? null : subUpdate.error?.message) ||
       dbError?.message ||
       "Failed to activate subscription.";

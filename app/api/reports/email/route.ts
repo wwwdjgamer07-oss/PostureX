@@ -6,6 +6,7 @@ import type { UserDeliveryProfile } from "@/lib/reports/service";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/api/request";
 import { apiError, apiOk } from "@/lib/api/response";
+import { sendNotification } from "@/lib/pushServer";
 
 const ReportEmailSchema = z.object({
   period: z.enum(["daily", "weekly"]).optional()
@@ -48,6 +49,8 @@ export async function POST(request: Request) {
   if (!result.ok) {
     return apiError(result.error || result.reason || "Failed to send report email.", 500, "REPORT_EMAIL_FAILED");
   }
+
+  await sendNotification(user.id, "Daily report ready", "Your posture report is ready to review.", "/icon.svg", "/dashboard");
 
   return apiOk({ success: true, period, messageId: result.messageId ?? null });
 }

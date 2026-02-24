@@ -15,6 +15,11 @@ interface PricingIndiaClientProps {
   userId: string | null;
 }
 
+interface MembershipSnapshot {
+  subscriptionActive: boolean;
+  planExpiry: string | null;
+}
+
 const plans: Array<{
   id: "FREE" | "BASIC" | "PRO" | "PRO_WEEKLY";
   tier: PlanTier;
@@ -147,6 +152,7 @@ export function PricingIndiaClient({ currentPlan, userId }: PricingIndiaClientPr
   const [paymentCelebration, setPaymentCelebration] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [membership, setMembership] = useState<MembershipSnapshot>({ subscriptionActive: false, planExpiry: null });
 
   const isProcessing = processingPlan !== null;
 
@@ -206,6 +212,35 @@ export function PricingIndiaClient({ currentPlan, userId }: PricingIndiaClientPr
   }, [sessionUserId]);
 
   useEffect(() => {
+    if (!sessionUserId) return;
+    let active = true;
+
+    async function loadMembership() {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("users")
+          .select("subscription_active,plan_end")
+          .eq("id", sessionUserId)
+          .maybeSingle();
+        if (!active) return;
+        setMembership({
+          subscriptionActive: Boolean((data as { subscription_active?: boolean | null } | null)?.subscription_active),
+          planExpiry: (data as { plan_end?: string | null } | null)?.plan_end ?? null
+        });
+      } catch {
+        if (!active) return;
+        setMembership({ subscriptionActive: false, planExpiry: null });
+      }
+    }
+
+    void loadMembership();
+    return () => {
+      active = false;
+    };
+  }, [sessionUserId]);
+
+  useEffect(() => {
     void loadRazorpayScript();
   }, []);
 
@@ -252,6 +287,7 @@ export function PricingIndiaClient({ currentPlan, userId }: PricingIndiaClientPr
     const planMeta = paidPlanMeta[plan];
     const activatedLabel = `${planMeta.label}${planMeta.intervalLabel === "weekly" ? " (Weekly)" : ""}`;
     setActivePlan(payload.plan);
+    router.push("/dashboard");
     setPaymentCelebration(true);
     setMessage(`${activatedLabel} activated instantly.`);
     setError(null);
@@ -265,6 +301,16 @@ export function PricingIndiaClient({ currentPlan, userId }: PricingIndiaClientPr
       const err = "Please sign in to continue with payment.";
       setError(err);
       toast.error(err);
+      return;
+    }
+
+    const isActiveMember =
+      membership.subscriptionActive &&
+      Boolean(membership.planExpiry && new Date(membership.planExpiry).getTime() > Date.now());
+    if (isActiveMember) {
+      const expiryText = membership.planExpiry ? new Date(membership.planExpiry).toLocaleString() : "active";
+      setMessage(`Your membership is already active until ${expiryText}. Redirecting to dashboard...`);
+      router.push("/dashboard");
       return;
     }
 
@@ -389,6 +435,13 @@ export function PricingIndiaClient({ currentPlan, userId }: PricingIndiaClientPr
                     type="button"
                     disabled={isProcessing}
                     onClick={() => {
+                      const isActiveMember =
+                        membership.subscriptionActive &&
+                        Boolean(membership.planExpiry && new Date(membership.planExpiry).getTime() > Date.now());
+                      if (isActiveMember) {
+                        router.push("/dashboard");
+                        return;
+                      }
                       if (plan.paidPlan) {
                         void startRazorpayCheckout(plan.paidPlan);
                       }

@@ -5,6 +5,7 @@ import DevServiceWorkerReset from "@/components/DevServiceWorkerReset";
 import { DailyReminderScheduler } from "@/components/DailyReminderScheduler";
 import { Navbar } from "@/components/Navbar";
 import { PXPersonalizationController } from "@/components/PXPersonalizationController";
+import { ThemeLoader } from "@/components/ThemeLoader";
 import { ThemeController } from "@/components/ThemeController";
 import { getAppName, getAppUrl } from "@/lib/env";
 import { Toaster } from "sonner";
@@ -66,6 +67,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className="antialiased">
         <ThemeController />
+        <ThemeLoader />
         <PXPersonalizationController />
         <AuthHashRouter />
         <DevServiceWorkerReset />

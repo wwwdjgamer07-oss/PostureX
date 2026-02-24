@@ -2,6 +2,7 @@ import { BarChart3, Cpu, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { AmbientBackground } from "@/components/AmbientBackground";
 import { PostureXHeroAnimation } from "@/components/PostureXHeroAnimation";
+import { StartFreeButton } from "@/components/StartFreeButton";
 
 const featureItems = [
   {
@@ -22,15 +23,16 @@ const featureItems = [
 ];
 
 const pricing = [
-  { name: "Free", price: "INR 0", description: "For limited sessions and basic analytics.", cta: "Get Started", href: "/pricing" },
-  { name: "Basic", price: "INR 1", description: "Unlimited sessions with alerts and PDF reports.", cta: "Choose Basic", href: "/pricing?plan=basic" },
-  { name: "Pro", price: "INR 2", description: "Advanced AI insights, trends, and team dashboard.", cta: "Choose Pro", featured: true, href: "/pricing?plan=pro" },
+  { name: "Free", price: "INR 0", description: "For limited sessions and basic analytics.", cta: "Get Started", href: "/pricing", smart: true },
+  { name: "Basic", price: "INR 1", description: "Unlimited sessions with alerts and PDF reports.", cta: "Choose Basic", href: "/pricing?plan=basic", smart: true },
+  { name: "Pro", price: "INR 2", description: "Advanced AI insights, trends, and team dashboard.", cta: "Choose Pro", featured: true, href: "/pricing?plan=pro", smart: true },
   {
     name: "Pro Weekly",
     price: "INR 1",
     description: "Weekly Pro membership with 20 PX Coins + 1 Blue Gem bonus.",
     cta: "Choose Pro Weekly",
-    href: "/pricing?plan=pro_weekly"
+    href: "/pricing?plan=pro_weekly",
+    smart: true
   }
 ];
 
@@ -72,9 +74,13 @@ export default function HomePage() {
               <p className="text-sm uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{plan.name}</p>
               <p className="mt-3 text-4xl font-semibold text-slate-900 dark:text-white">{plan.price}</p>
               <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{plan.description}</p>
-              <Link href={plan.href} className="px-button mt-6 inline-flex w-full justify-center">
-                {plan.cta}
-              </Link>
+              {plan.smart ? (
+                <StartFreeButton className="px-button mt-6 inline-flex w-full justify-center">{plan.cta}</StartFreeButton>
+              ) : (
+                <Link href={plan.href} className="px-button mt-6 inline-flex w-full justify-center">
+                  {plan.cta}
+                </Link>
+              )}
             </article>
           ))}
         </div>

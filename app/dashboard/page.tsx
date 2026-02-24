@@ -3,6 +3,7 @@ import { DashboardClient } from "@/components/DashboardClient";
 import { getUserPlanTierForClient } from "@/lib/planAccess";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { calculateCurrentStreak } from "@/lib/streak";
+import { syncSubscriptionExpiry } from "@/lib/subscriptionLifecycle";
 
 interface SessionRow {
   id: string;
@@ -54,6 +55,8 @@ export default async function DashboardPage() {
   if (!user) {
     redirect("/auth");
   }
+
+  await syncSubscriptionExpiry(supabase, user.id);
 
   const { data: profileRow } = await supabase.from("users").select("px_dashboard_layout").eq("id", user.id).maybeSingle();
   const planTier = await getUserPlanTierForClient(supabase, user.id, user.email);

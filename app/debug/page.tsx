@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { classifyRisk, riskLabelDetail, calculateAdjustedScore } from "@/lib/riskEngine";
 import { RISK_COLORS } from "@/lib/constants";
+import { NotificationTriggerExample } from "@/components/NotificationTriggerExample";
 
 export default function RiskDebugger() {
   const [score, setScore] = useState<number>(90);
@@ -72,6 +73,10 @@ export default function RiskDebugger() {
               Adjusted Score: {adjustedScore.toFixed(2)}
             </div>
           </div>
+        </div>
+        <div className="mt-6 border-t border-cyan-300/20 pt-4">
+          <p className="mb-3 text-xs uppercase tracking-[0.14em] text-cyan-200">Push Notification Trigger Example</p>
+          <NotificationTriggerExample />
         </div>
       </div>
     </div>

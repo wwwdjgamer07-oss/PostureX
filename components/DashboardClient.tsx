@@ -17,6 +17,7 @@ import { usePersonalizationProfile } from "@/lib/personalization/profileClient";
 import { resolveLevel } from "@/lib/games/xpSystem";
 import { useIsObsidianSkullTheme } from "@/lib/personalization/usePxTheme";
 import { readDailyReport, SENSOR_ACTIVE_KEY, SensorPostureEngine, type SensorDailyReport } from "@/lib/sensorPostureEngine";
+import { usePushNotifications } from "@/lib/usePushNotifications";
 import type { PlanTier } from "@/lib/types";
 
 interface SessionRecord {
@@ -117,6 +118,11 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
   const [sensorModeActive, setSensorModeActive] = useState(false);
   const [dailySensorReport, setDailySensorReport] = useState<SensorDailyReport | null>(null);
   const [yesterdaySensorReport, setYesterdaySensorReport] = useState<SensorDailyReport | null>(null);
+  usePushNotifications(true);
+
+  useEffect(() => {
+    void fetch("/api/subscription/sync", { method: "POST", credentials: "include" });
+  }, []);
 
   useEffect(() => {
     const syncRewards = () => setRewardProgress(readRewardProgress());

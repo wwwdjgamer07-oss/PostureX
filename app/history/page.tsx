@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { HistoryClient } from "@/components/HistoryClient";
 import { getUserPlanTierForClient } from "@/lib/planAccess";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { requireProAccess } from "@/lib/subscriptionLifecycle";
 import { SessionSummary } from "@/lib/types";
 
 function isMissingSourceColumn(message: string | null | undefined) {
@@ -19,11 +20,8 @@ export default async function HistoryPage() {
     redirect("/auth?next=/history");
   }
 
+  await requireProAccess(supabase, user.id, "/pricing?plan=pro");
   const planTier = await getUserPlanTierForClient(supabase, user.id, user.email);
-
-  if (planTier !== "PRO") {
-    redirect("/pricing?plan=pro");
-  }
 
   const primarySessionQuery = await supabase
     .from("sessions")

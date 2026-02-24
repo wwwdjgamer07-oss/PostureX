@@ -3,6 +3,7 @@ import { requireApiUser } from "@/lib/api";
 import { applyGodModeProfile, isGodModeUser } from "@/lib/personalization/godMode";
 import { applyEarnings, normalizePersonalizationRow } from "@/lib/personalization/service";
 import type { GemWallet } from "@/lib/personalization/types";
+import { sendNotification } from "@/lib/pushServer";
 
 export const runtime = "nodejs";
 
@@ -68,6 +69,16 @@ export async function POST(request: Request) {
     })
     .eq("id", user.id);
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+
+  if (earned.coins > 0 || earned.gems.blue > 0 || earned.gems.purple > 0 || earned.gems.gold > 0) {
+    await sendNotification(
+      user.id,
+      "Reward unlocked",
+      `+${earned.coins} PX Coins and gems added to your wallet.`,
+      "/icon.svg",
+      "/dashboard"
+    );
+  }
 
   return NextResponse.json({ ok: true, earned, profile: next });
 }

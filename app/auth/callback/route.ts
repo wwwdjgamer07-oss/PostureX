@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 function getNextPath(value: string | null) {
   if (!value) return "/dashboard";
-  return value.startsWith("/") ? value : "/dashboard";
+  return value.startsWith("/") ? "/dashboard" : "/dashboard";
 }
 
 export async function GET(request: Request) {

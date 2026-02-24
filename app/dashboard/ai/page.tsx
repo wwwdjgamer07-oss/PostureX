@@ -3,6 +3,7 @@ import { Activity, Brain, ShieldAlert, Timer, TrendingUp } from "lucide-react";
 import { AIChatPanel } from "@/components/dashboard/AIChatPanel";
 import { getUserPlanTierForClient } from "@/lib/planAccess";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { requireProAccess } from "@/lib/subscriptionLifecycle";
 
 interface SessionRow {
   avg_alignment: number;
@@ -49,11 +50,8 @@ export default async function DashboardAIPage() {
     redirect("/auth");
   }
 
+  await requireProAccess(supabase, user.id, "/pricing?plan=basic");
   const planTier = await getUserPlanTierForClient(supabase, user.id, user.email);
-
-  if (planTier === "FREE") {
-    redirect("/pricing?plan=basic");
-  }
 
   const [{ data: latestSessionRow }, { data: weeklyRowsData }] = await Promise.all([
     supabase

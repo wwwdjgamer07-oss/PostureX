@@ -86,14 +86,19 @@ export default function AuthPage() {
 
       const code = query.get("code");
       if (code) {
-        const nextParam = query.get("next");
-        const nextPath = nextParam && nextParam.startsWith("/") ? nextParam : "/dashboard";
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
         if (exchangeError) {
-          setError("Google sign-in could not be completed. Please try again.");
+          console.error("OAuth exchange failed", exchangeError);
+          const msg = String(exchangeError.message || "").toLowerCase();
+          if (msg.includes("pkce") || msg.includes("verifier")) {
+            setError("Google sign-in failed in embedded browser. Open PostureX in your default browser and try again.");
+          } else {
+            setError("Google sign-in could not be completed. Please try again.");
+          }
           return;
         }
-        router.replace(nextPath);
+        await fetch("/api/subscription/sync", { method: "POST", credentials: "include" }).catch(() => null);
+        router.replace("/dashboard");
         return;
       }
 
@@ -116,6 +121,7 @@ export default function AuthPage() {
     const initialize = async () => {
       const { data } = await supabase.auth.getUser();
       if (data.user) {
+        await fetch("/api/subscription/sync", { method: "POST", credentials: "include" }).catch(() => null);
         router.replace("/dashboard");
       }
     };
@@ -123,8 +129,9 @@ export default function AuthPage() {
     void initialize();
     const {
       data: { subscription }
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
+        await fetch("/api/subscription/sync", { method: "POST", credentials: "include" }).catch(() => null);
         router.replace("/dashboard");
       }
     });
@@ -147,6 +154,7 @@ export default function AuthPage() {
           password
         });
         if (signInError) throw signInError;
+        await fetch("/api/subscription/sync", { method: "POST", credentials: "include" }).catch(() => null);
         router.replace("/dashboard");
       } else {
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -214,7 +222,7 @@ export default function AuthPage() {
     setMessage(null);
 
     try {
-      const redirectTo = `${getSiteUrl()}/auth?next=/dashboard`;
+      const redirectTo = `${getSiteUrl()}/auth/callback`;
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo }
@@ -228,6 +236,7 @@ export default function AuthPage() {
 
       window.location.assign(oauthUrl);
     } catch (oauthFailure) {
+      console.error("Google OAuth failed", oauthFailure);
       setError(oauthFailure instanceof Error ? oauthFailure.message : "Google OAuth failed.");
       setLoading(false);
     }
@@ -261,6 +270,11 @@ export default function AuthPage() {
     } finally {
       setResending(false);
     }
+  }
+
+  function openInBrowser() {
+    if (typeof window === "undefined") return;
+    window.open(window.location.href, "_blank", "noopener,noreferrer");
   }
 
   return (
@@ -357,6 +371,13 @@ export default function AuthPage() {
               className="h-11 w-full rounded-xl border border-slate-200/80 bg-white/85 text-base font-semibold text-slate-800 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:hover:bg-white/10"
             >
               Continue with Google
+            </button>
+            <button
+              type="button"
+              onClick={openInBrowser}
+              className="h-11 w-full rounded-xl border border-slate-200/80 bg-white/85 text-base font-semibold text-slate-800 transition hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:hover:bg-white/10"
+            >
+              Open in Browser
             </button>
 
             {error?.toLowerCase().includes("verification link expired") ? (

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PlanTier } from "@/lib/types";
 import { isPrimaryAdminEmail } from "@/lib/adminAccess";
+import { isProActive } from "@/lib/subscriptionLifecycle";
 
 export const FREE_DAILY_SESSION_LIMIT = 3;
 
@@ -39,10 +40,31 @@ export async function getUserPlanTierForClient(supabase: SupabaseClient, userId:
     return "PRO";
   }
 
-  const { data: userPlan } = await supabase.from("users").select("plan_tier,email").eq("id", userId).maybeSingle();
-  const userRow = (userPlan as { plan_tier?: unknown; email?: unknown } | null) ?? null;
+  const { data: userPlan } = await supabase
+    .from("users")
+    .select("plan_tier,email,plan_type,plan_status,plan_end,subscription_active")
+    .eq("id", userId)
+    .maybeSingle();
+  const userRow =
+    (userPlan as {
+      plan_tier?: unknown;
+      email?: unknown;
+      plan_type?: unknown;
+      plan_status?: unknown;
+      plan_end?: unknown;
+      subscription_active?: unknown;
+    } | null) ?? null;
   const profilePlan = normalizePlanTier(userRow?.plan_tier);
   const email = typeof userRow?.email === "string" ? userRow.email : userEmail ?? null;
+  const activeByLifecycle = isProActive({
+    planType: userRow?.plan_type,
+    planStatus: userRow?.plan_status,
+    planEnd: userRow?.plan_end,
+    subscriptionActive: userRow?.subscription_active
+  });
+  if (activeByLifecycle) {
+    return resolveGodPlan(email, "PRO");
+  }
   const profileWithGod = resolveGodPlan(email, profilePlan);
   if (profileWithGod !== "FREE") return profileWithGod;
 

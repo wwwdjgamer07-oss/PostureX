@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Brain, Gamepad2, Rocket, Grid3X3, CircleDot, Brackets, Layers, Coins, Gem, Shield, Trophy } from "lucide-react";
 import { SkullCoinIcon, SkullCrystalIcon, SkullGemIcon, SkullJoystickIcon } from "@/components/icons/SkullIcons";
+import { FullscreenGameLayout } from "@/components/games/FullscreenGameLayout";
 import { PXCustomizationPanel } from "@/components/pxplay/PXCustomizationPanel";
+import { useResizeCanvas } from "@/lib/games/useResizeCanvas";
 import { setPersonalizationWalletFromMutation, usePersonalizationProfile } from "@/lib/personalization/profileClient";
 import { useIsObsidianSkullTheme } from "@/lib/personalization/usePxTheme";
 
@@ -500,6 +502,7 @@ function SnakeGame({
 }) {
   const isTouch = useIsTouchDevice();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [stats, setStats] = useState<ArcadeStats>({ score: 0, level: 1, lives: 1, over: false });
   const dirRef = useRef({ x: 1, y: 0 });
   const nextDirRef = useRef({ x: 1, y: 0 });
@@ -515,6 +518,7 @@ function SnakeGame({
   const [eatPopup, setEatPopup] = useState<{ x: number; y: number; id: number } | null>(null);
   const hasMovedRef = useRef(false);
   const cell = 16;
+  useResizeCanvas(containerRef, canvasRef);
 
   const setDirection = useCallback((x: number, y: number) => {
     const current = dirRef.current;
@@ -621,6 +625,12 @@ function SnakeGame({
       if (!ctx) return;
       const boardW = 384;
       const boardH = 384;
+      const scale = Math.min(canvas.width / boardW, canvas.height / boardH) || 1;
+      const offsetX = (canvas.width - boardW * scale) / 2;
+      const offsetY = (canvas.height - boardH * scale) / 2;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
       ctx.fillStyle = palette.bgA;
       ctx.fillRect(0, 0, boardW, boardH);
       for (let y = 0; y < 24; y += 1) {
@@ -725,6 +735,7 @@ function SnakeGame({
         ctx.font = '11px "IBM Plex Mono", monospace';
         ctx.fillText("WASD also works", 147, 117);
       }
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
     },
     enabled
   );
@@ -734,12 +745,11 @@ function SnakeGame({
     setStats,
     reset,
     canvas: (
-      <div className="mx-auto w-full max-w-[96vw] space-y-3">
+      <div className="relative w-full h-full">
+        <div ref={containerRef} className="flex-1 relative h-full w-full">
         <canvas
           ref={canvasRef}
-          width={384}
-          height={384}
-          className="mx-auto h-auto w-[92vw] max-w-[384px] rounded-xl touch-none sm:h-[56vh] sm:w-auto sm:max-w-[96vw]"
+          className="absolute inset-0 w-full h-full touch-none"
           onTouchStart={(event) => {
             const touch = event.touches[0];
             if (!touch) return;
@@ -759,8 +769,9 @@ function SnakeGame({
             }
           }}
         />
+        </div>
         {isTouch ? (
-          <div className="mx-auto grid w-full max-w-[240px] grid-cols-3 gap-2">
+          <div className="absolute left-0 right-0 bottom-0 pb-[env(safe-area-inset-bottom)] p-3 grid grid-cols-3 gap-3 bg-black/40 backdrop-blur-xl">
             <span />
             <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-3 text-cyan-100" onClick={() => setDirection(0, -1)}>Up</button>
             <span />
@@ -795,6 +806,7 @@ function LanderGame({
   const height = 700;
   const worldWidth = 5600;
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [stats, setStats] = useState<ArcadeStats>({ score: 0, level: 1, lives: 3, over: false });
   const shipRef = useRef({ x: 380, y: 170, vx: 0, vy: 0, angle: 0 });
   const keysRef = useRef({ left: false, right: false, up: false });
@@ -813,6 +825,7 @@ function LanderGame({
   const terrainRef = useRef<Array<{ x: number; y: number }>>([]);
   const padRef = useRef({ x: 740, w: 110, y: 620 });
   const spawnXRef = useRef(380);
+  useResizeCanvas(containerRef, canvasRef);
 
   useEffect(() => {
     const chunk = [
@@ -970,6 +983,12 @@ function LanderGame({
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
+      const scale = Math.min(canvas.width / width, canvas.height / height) || 1;
+      const offsetX = (canvas.width - width * scale) / 2;
+      const offsetY = (canvas.height - height * scale) / 2;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
       const camX = cameraXRef.current;
       const terrainTint = "rgba(255,255,255,0.58)";
       const padTint = "#ffffff";
@@ -1070,6 +1089,7 @@ function LanderGame({
       ctx.fillText(`ALTITUDE         ${String(altitude).padStart(4, "0")}`, width - 600, 62);
       ctx.fillText(`HORIZONTAL SPEED ${hSpeed}`, width - 600, 106);
       ctx.fillText(`VERTICAL SPEED   ${vSpeed}`, width - 600, 150);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
     },
     enabled
   );
@@ -1079,10 +1099,12 @@ function LanderGame({
     setStats,
     reset,
     canvas: (
-      <div className="w-full space-y-3">
-        <canvas ref={canvasRef} width={width} height={height} className="mx-auto h-auto w-[96vw] max-w-[1100px] rounded-none touch-none sm:h-[50vh] sm:w-auto sm:max-w-[98vw]" />
+      <div className="relative w-full h-full">
+        <div ref={containerRef} className="flex-1 relative h-full w-full">
+          <canvas ref={canvasRef} className="absolute inset-0 h-full w-full rounded-none touch-none" />
+        </div>
         {isTouch ? (
-          <div className="mx-auto grid w-full max-w-md grid-cols-3 gap-2">
+          <div className="absolute left-0 right-0 bottom-0 pb-[env(safe-area-inset-bottom)] p-3 grid grid-cols-3 gap-2 bg-black/40 backdrop-blur-xl">
             <button
               type="button"
               className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-3 text-cyan-100"
@@ -1576,6 +1598,7 @@ function PongGame({
 }) {
   const isTouch = useIsTouchDevice();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [stats, setStats] = useState<ArcadeStats>({ score: 0, level: 1, lives: 3, over: false });
   const playerY = useRef(160);
   const aiY = useRef(160);
@@ -1584,6 +1607,7 @@ function PongGame({
   const trailRef = useRef<Array<{ x: number; y: number }>>([]);
   const [impactFlash, setImpactFlash] = useState(0);
   const [shake, setShake] = useState(0);
+  useResizeCanvas(containerRef, canvasRef);
 
   const reset = useCallback(() => {
     setStats({ score: 0, level: 1, lives: 3, over: false });
@@ -1677,11 +1701,19 @@ function PongGame({
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
+      const width = 400;
+      const height = 400;
+      const scale = Math.min(canvas.width / width, canvas.height / height) || 1;
+      const offsetX = (canvas.width - width * scale) / 2;
+      const offsetY = (canvas.height - height * scale) / 2;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
       const arenaGlow = theme === "toxic" ? "rgba(132,204,22,0.2)" : theme === "sunset" ? "rgba(251,146,60,0.2)" : "rgba(34,211,238,0.2)";
       const ballColor = theme === "toxic" ? "#bef264" : theme === "sunset" ? "#fdba74" : "#67e8f9";
-      const offsetX = shake > 0 ? Math.sin(Date.now() * 0.06) * 4 * shake : 0;
+      const shakeOffset = shake > 0 ? Math.sin(Date.now() * 0.06) * 4 * shake : 0;
       ctx.save();
-      ctx.translate(offsetX, 0);
+      ctx.translate(shakeOffset, 0);
       ctx.fillStyle = "#020814";
       ctx.fillRect(0, 0, 400, 400);
       ctx.strokeStyle = arenaGlow;
@@ -1717,6 +1749,7 @@ function PongGame({
       }
       ctx.shadowBlur = 0;
       ctx.restore();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
     },
     enabled
   );
@@ -1726,12 +1759,11 @@ function PongGame({
     setStats,
     reset,
     view: (
-      <div className="mx-auto w-full max-w-[96vw] space-y-3">
+      <div className="relative w-full h-full">
+        <div ref={containerRef} className="flex-1 relative h-full w-full">
         <canvas
           ref={canvasRef}
-          width={400}
-          height={400}
-          className="mx-auto h-auto w-[92vw] max-w-[384px] rounded-xl touch-none sm:h-[56vh] sm:w-auto sm:max-w-[96vw]"
+          className="absolute inset-0 h-full w-full touch-none"
           onTouchStart={(event) => {
             const touch = event.touches[0];
             if (!touch) return;
@@ -1745,8 +1777,9 @@ function PongGame({
             movePaddleFromClientY(touch.clientY);
           }}
         />
+        </div>
         {isTouch ? (
-          <div className="mx-auto grid w-full max-w-[260px] grid-cols-2 gap-2">
+          <div className="absolute left-0 right-0 bottom-0 pb-[env(safe-area-inset-bottom)] p-3 grid grid-cols-2 gap-2 bg-black/40 backdrop-blur-xl">
             <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-2 text-cyan-100" onClick={() => { playerY.current = clamp(playerY.current - 28, 0, 340); }}>Up</button>
             <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-2 text-cyan-100" onClick={() => { playerY.current = clamp(playerY.current + 28, 0, 340); }}>Down</button>
           </div>
@@ -1765,12 +1798,14 @@ function BreakoutGame({ onFinish, enabled }: { onFinish: (score: number, won: bo
   const LEFT_WALL = 12;
   const RIGHT_WALL = WIDTH - 12;
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [stats, setStats] = useState<ArcadeStats>({ score: 0, level: 1, lives: 3, over: false });
   const paddleX = useRef(160);
   const paddleW = useRef(90);
   const ball = useRef({ x: 200, y: 250, vx: 170, vy: -170 });
   const bricks = useRef<Brick[]>([]);
   const lastEnabledRef = useRef(false);
+  useResizeCanvas(containerRef, canvasRef);
 
   const spawnLevel = useCallback((level: number) => {
     const rows = Math.min(7, 5 + Math.floor((level - 1) / 1));
@@ -1901,6 +1936,12 @@ function BreakoutGame({ onFinish, enabled }: { onFinish: (score: number, won: bo
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
+      const scale = Math.min(canvas.width / WIDTH, canvas.height / HEIGHT) || 1;
+      const offsetX = (canvas.width - WIDTH * scale) / 2;
+      const offsetY = (canvas.height - HEIGHT * scale) / 2;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
       ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
       // OG frame
@@ -1946,6 +1987,7 @@ function BreakoutGame({ onFinish, enabled }: { onFinish: (score: number, won: bo
 
       ctx.fillStyle = "#f1f5f9";
       ctx.fillRect(ball.current.x - 2, ball.current.y - 2, 4, 4);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
     },
     enabled
   );
@@ -1955,12 +1997,11 @@ function BreakoutGame({ onFinish, enabled }: { onFinish: (score: number, won: bo
     setStats,
     reset,
     view: (
-      <div className="mx-auto w-full max-w-[96vw] space-y-3">
+      <div className="relative w-full h-full">
+        <div ref={containerRef} className="flex-1 relative h-full w-full">
         <canvas
           ref={canvasRef}
-          width={WIDTH}
-          height={HEIGHT}
-          className="mx-auto h-auto w-[92vw] max-w-[384px] rounded-xl touch-none sm:h-[56vh] sm:w-auto sm:max-w-[96vw]"
+          className="absolute inset-0 h-full w-full touch-none"
           onTouchStart={(event) => {
             const touch = event.touches[0];
             if (!touch) return;
@@ -1974,8 +2015,9 @@ function BreakoutGame({ onFinish, enabled }: { onFinish: (score: number, won: bo
             movePaddleFromClientX(touch.clientX);
           }}
         />
+        </div>
         {isTouch ? (
-          <div className="mx-auto grid w-full max-w-[260px] grid-cols-2 gap-2">
+          <div className="absolute left-0 right-0 bottom-0 pb-[env(safe-area-inset-bottom)] p-3 grid grid-cols-2 gap-2 bg-black/40 backdrop-blur-xl">
             <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-2 text-cyan-100" onClick={() => { paddleX.current = clamp(paddleX.current - 26, LEFT_WALL + 2, RIGHT_WALL - paddleW.current - 2); }}>Left</button>
             <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-2 text-cyan-100" onClick={() => { paddleX.current = clamp(paddleX.current + 26, LEFT_WALL + 2, RIGHT_WALL - paddleW.current - 2); }}>Right</button>
           </div>
@@ -2641,56 +2683,19 @@ export function PXPlayClient() {
           </article>
         </section>
       ) : current ? (
-        <div ref={gameFrameRef} className="px-game-full-target w-full pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <GameFrame
+        <div ref={gameFrameRef} className="px-game-full-target w-full">
+          <FullscreenGameLayout
             title={current.title}
-            stats={current.stats}
-            best={persisted[current.id].best}
-            streak={persisted[current.id].streak}
-            theme={theme}
-            skin={skins[current.id]}
-            rewardsEarned={lastRewardByGame[current.id]}
-            onRestart={restart}
+            canvas={current.view}
             onExit={() => setActiveGame(null)}
-            onFullscreen={toggleFullscreen}
-            onTutorial={() => openTutorial(current.id)}
-            footerExtras={
-              current.id === "lander" ? (
-                <>
-                  <span className="inline-flex rounded-lg border border-slate-500/45 bg-slate-900/60 p-1">
-                    {[1, 2, 3, 4].map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setLanderSpeed(m as 1 | 2 | 3 | 4)}
-                        className={`rounded px-2 py-1 text-xs ${landerSpeed === m ? "bg-cyan-400/20 text-cyan-100" : "text-slate-300"}`}
-                      >
-                        {m}X
-                      </button>
-                    ))}
-                  </span>
-                  <span className="inline-flex rounded-lg border border-slate-500/45 bg-slate-900/60 p-1">
-                    <button
-                      type="button"
-                      onClick={() => setLanderLoopMode(false)}
-                      className={`rounded px-2 py-1 text-xs ${!landerLoopMode ? "bg-cyan-400/20 text-cyan-100" : "text-slate-300"}`}
-                    >
-                      Complete
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLanderLoopMode(true)}
-                      className={`rounded px-2 py-1 text-xs ${landerLoopMode ? "bg-cyan-400/20 text-cyan-100" : "text-slate-300"}`}
-                    >
-                      Loop
-                    </button>
-                  </span>
-                </>
-              ) : null
+            controls={
+              <>
+                <button type="button" onClick={restart} className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-2 text-cyan-100">Restart</button>
+                <button type="button" onClick={() => openTutorial(current.id)} className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-2 text-cyan-100">Tutorial</button>
+                <button type="button" onClick={toggleFullscreen} className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-2 text-cyan-100">Fullscreen</button>
+              </>
             }
-          >
-            {current.view}
-          </GameFrame>
+          />
         </div>
       ) : (
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

@@ -3,6 +3,7 @@ import { requireApiUser } from "@/lib/api";
 import { z } from "zod";
 import { parseJsonBody, sanitizeText } from "@/lib/api/request";
 import { apiError, apiOk } from "@/lib/api/response";
+import { isProActive } from "@/lib/subscriptionLifecycle";
 
 export const runtime = "nodejs";
 
@@ -63,6 +64,24 @@ export async function POST(request: Request) {
   }
 
   const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
+
+  const { data: membership } = await supabase
+    .from("users")
+    .select("plan_type,plan_end,plan_status,subscription_active")
+    .eq("id", user.id)
+    .maybeSingle();
+  const activeMembership = isProActive({
+    planType: (membership as { plan_type?: string | null } | null)?.plan_type,
+    planEnd: (membership as { plan_end?: string | null } | null)?.plan_end,
+    planStatus: (membership as { plan_status?: string | null } | null)?.plan_status,
+    subscriptionActive: (membership as { subscription_active?: boolean | null } | null)?.subscription_active
+  });
+  if (activeMembership) {
+    return apiError("Membership is already active. Redirect to dashboard.", 409, "ALREADY_ACTIVE_MEMBERSHIP", {
+      expiryDate: (membership as { plan_end?: string | null } | null)?.plan_end ?? null,
+      redirectTo: "/dashboard"
+    });
+  }
 
   try {
     const order = await razorpay.orders.create({
