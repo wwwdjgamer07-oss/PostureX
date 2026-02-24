@@ -87,6 +87,12 @@ function formatTime(value: string) {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+function compactMicError(message: string) {
+  if (!message) return "";
+  const clean = message.split("Details:")[0]?.trim() ?? message;
+  return clean.length > 140 ? `${clean.slice(0, 140)}...` : clean;
+}
+
 export function GlobalChatbot() {
   const isObsidianSkull = useIsObsidianSkullTheme();
   const router = useRouter();
@@ -566,7 +572,7 @@ export function GlobalChatbot() {
 
       <aside
         className={cn(
-          "px-global-chat-wrap fixed right-4 top-20 z-[68] flex h-[min(78vh,740px)] w-[min(92vw,390px)] origin-bottom-right transition-all duration-300 sm:right-6",
+          "px-global-chat-wrap fixed inset-x-3 top-[calc(env(safe-area-inset-top)+5rem)] bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-[68] flex w-auto origin-bottom-right transition-all duration-300 sm:inset-x-auto sm:right-6 sm:top-20 sm:bottom-auto sm:h-[min(78vh,740px)] sm:w-[min(92vw,390px)]",
           isOpen ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-6 scale-95 opacity-0"
         )}
         aria-hidden={!isOpen}
@@ -715,7 +721,7 @@ export function GlobalChatbot() {
                 <Send className="h-3.5 w-3.5" />
               </button>
             </div>
-            {micError ? <p className="mt-2 text-[11px] text-amber-200/90">{micError}</p> : null}
+            {micError ? <p className="mt-2 text-[11px] text-amber-200/90">{compactMicError(micError)}</p> : null}
           </div>
         </div>
       </aside>

@@ -31,15 +31,28 @@ interface SpeechRecognitionLike {
 
 type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 
-declare global {
-  interface Window {
+function speechRecognitionCtors() {
+  if (typeof window === "undefined") {
+    return {
+      SpeechRecognition: undefined,
+      webkitSpeechRecognition: undefined
+    } as {
+      SpeechRecognition?: SpeechRecognitionCtor;
+      webkitSpeechRecognition?: SpeechRecognitionCtor;
+    };
+  }
+  const win = window as Window & {
     SpeechRecognition?: SpeechRecognitionCtor;
     webkitSpeechRecognition?: SpeechRecognitionCtor;
-  }
+  };
+  return {
+    SpeechRecognition: win.SpeechRecognition,
+    webkitSpeechRecognition: win.webkitSpeechRecognition
+  };
 }
 
 function resolveSpeechError(raw: string) {
-  if (raw === "not-allowed") return "Microphone permission denied. Allow mic access and try again.";
+  if (raw === "not-allowed") return "Microphone permission denied. Enable microphone access and try again.";
   if (raw === "service-not-allowed") return "Speech service is blocked by browser or OS settings.";
   if (raw === "audio-capture") return "No microphone device available.";
   if (raw === "no-speech") return "No speech detected. Try speaking a bit louder.";
@@ -96,6 +109,11 @@ function diagnosticsSuffix(d: MicDiagnostics) {
   return `Details: secure=${d.secure}, permission=${d.permission}, mics=${micCount}, origin=${d.protocol}//${d.host}, browser=${browser}.`;
 }
 
+function isStandaloneApp() {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia?.("(display-mode: standalone)")?.matches ?? false;
+}
+
 export function MicInput({ onTranscript, onError, lang = "en-US" }: MicInputProps) {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const liveTextRef = useRef("");
@@ -105,8 +123,8 @@ export function MicInput({ onTranscript, onError, lang = "en-US" }: MicInputProp
   const [errorState, setErrorState] = useState<string | null>(null);
 
   const isRecognitionSupported = useMemo(() => {
-    if (typeof window === "undefined") return false;
-    return Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
+    const { SpeechRecognition, webkitSpeechRecognition } = speechRecognitionCtors();
+    return Boolean(SpeechRecognition || webkitSpeechRecognition);
   }, []);
 
   const reportError = useCallback(
@@ -119,7 +137,8 @@ export function MicInput({ onTranscript, onError, lang = "en-US" }: MicInputProp
 
   useEffect(() => {
     if (!isRecognitionSupported || typeof window === "undefined") return;
-    const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const { SpeechRecognition, webkitSpeechRecognition } = speechRecognitionCtors();
+    const Ctor = SpeechRecognition || webkitSpeechRecognition;
     if (!Ctor) return;
 
     const recognition = new Ctor();
@@ -203,13 +222,17 @@ export function MicInput({ onTranscript, onError, lang = "en-US" }: MicInputProp
   const startListening = useCallback(async () => {
     if (typeof window === "undefined") return;
     const diagnostics = await collectMicDiagnostics();
+    const diagnosticText = diagnosticsSuffix(diagnostics);
+    const standalone = isStandaloneApp();
 
     if (!window.isSecureContext) {
-      reportError(`Voice input needs HTTPS (or localhost). ${diagnosticsSuffix(diagnostics)}`);
+      console.warn("[MicInput]", diagnosticText);
+      reportError("Voice input needs HTTPS.");
       return;
     }
     if (!navigator.mediaDevices?.getUserMedia) {
-      reportError(`Microphone APIs are unavailable in this browser. ${diagnosticsSuffix(diagnostics)}`);
+      console.warn("[MicInput]", diagnosticText);
+      reportError("Microphone APIs are unavailable in this browser.");
       return;
     }
 
@@ -220,30 +243,38 @@ export function MicInput({ onTranscript, onError, lang = "en-US" }: MicInputProp
     } catch (err) {
       const domErr = err as { name?: string };
       if (domErr?.name === "NotAllowedError") {
-        reportError(`Microphone permission denied in browser settings. ${diagnosticsSuffix(diagnostics)}`);
+        console.warn("[MicInput]", diagnosticText);
+        reportError(
+          standalone
+            ? "Microphone is blocked for this installed app. Android: long-press app icon -> App info -> Permissions -> Microphone -> Allow."
+            : "Microphone permission denied. Tap the lock icon in the address bar and allow Microphone, then reload."
+        );
         return;
       }
       if (domErr?.name === "NotFoundError") {
-        reportError(`No microphone device found. ${diagnosticsSuffix(diagnostics)}`);
+        console.warn("[MicInput]", diagnosticText);
+        reportError("No microphone device found.");
         return;
       }
       if (domErr?.name === "NotReadableError") {
-        reportError(`Microphone is busy in another app. ${diagnosticsSuffix(diagnostics)}`);
+        console.warn("[MicInput]", diagnosticText);
+        reportError("Microphone is busy in another app.");
         return;
       }
-      reportError(`Microphone access failed. ${diagnosticsSuffix(diagnostics)}`);
+      console.warn("[MicInput]", diagnosticText);
+      reportError("Microphone access failed.");
       return;
     }
 
     if (!isRecognitionSupported) {
-      reportError(
-        `Microphone access is granted, but speech recognition is not supported here. Use latest Chrome or Edge. ${diagnosticsSuffix(diagnostics)}`
-      );
+      console.warn("[MicInput]", diagnosticText);
+      reportError("Microphone is allowed, but speech recognition is not supported here. Use latest Chrome or Edge.");
       return;
     }
 
     if (!recognitionRef.current) {
-      reportError(`Speech recognizer failed to initialize. ${diagnosticsSuffix(diagnostics)}`);
+      console.warn("[MicInput]", diagnosticText);
+      reportError("Speech recognizer failed to initialize.");
       return;
     }
 
@@ -254,7 +285,8 @@ export function MicInput({ onTranscript, onError, lang = "en-US" }: MicInputProp
       recognitionRef.current.start();
     } catch {
       startingRef.current = false;
-      reportError(`Could not start voice input. Try again. ${diagnosticsSuffix(diagnostics)}`);
+      console.warn("[MicInput]", diagnosticText);
+      reportError("Could not start voice input. Try again.");
     }
   }, [isRecognitionSupported, listening, reportError]);
 
