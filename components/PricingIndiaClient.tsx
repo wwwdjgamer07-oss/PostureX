@@ -155,6 +155,10 @@ export function PricingIndiaClient({ currentPlan, userId }: PricingIndiaClientPr
   const [membership, setMembership] = useState<MembershipSnapshot>({ subscriptionActive: false, planExpiry: null });
 
   const isProcessing = processingPlan !== null;
+  const isActiveMember =
+    membership.subscriptionActive &&
+    Boolean(membership.planExpiry && new Date(membership.planExpiry).getTime() > Date.now());
+  const basicToProUpgradeEligible = isActiveMember && activePlan === "BASIC";
 
   useEffect(() => {
     setActivePlan(currentPlan);
@@ -304,10 +308,8 @@ export function PricingIndiaClient({ currentPlan, userId }: PricingIndiaClientPr
       return;
     }
 
-    const isActiveMember =
-      membership.subscriptionActive &&
-      Boolean(membership.planExpiry && new Date(membership.planExpiry).getTime() > Date.now());
-    if (isActiveMember) {
+    const allowBasicToProUpgrade = basicToProUpgradeEligible && plan === "PRO";
+    if (isActiveMember && !allowBasicToProUpgrade) {
       const expiryText = membership.planExpiry ? new Date(membership.planExpiry).toLocaleString() : "active";
       setMessage(`Your membership is already active until ${expiryText}. Redirecting to dashboard...`);
       router.push("/dashboard");
@@ -321,7 +323,7 @@ export function PricingIndiaClient({ currentPlan, userId }: PricingIndiaClientPr
     setSelectedPlan(plan);
 
     try {
-      const amount = paidPlanMeta[plan].amount;
+      const amount = allowBasicToProUpgrade ? 1 : paidPlanMeta[plan].amount;
       const orderResponse = await fetch("/api/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -397,6 +399,8 @@ export function PricingIndiaClient({ currentPlan, userId }: PricingIndiaClientPr
         {plans.map((plan) => {
           const isCurrent = plan.tier === activePlan;
           const isSelected = Boolean(plan.paidPlan && selectedPlan === plan.paidPlan);
+          const allowBasicToProUpgrade = Boolean(plan.paidPlan === "PRO" && basicToProUpgradeEligible);
+          const expiryLabel = membership.planExpiry ? new Date(membership.planExpiry).toLocaleDateString() : null;
           return (
             <article
               key={plan.id}
@@ -433,12 +437,9 @@ export function PricingIndiaClient({ currentPlan, userId }: PricingIndiaClientPr
                 ) : (
                   <button
                     type="button"
-                    disabled={isProcessing}
+                    disabled={isProcessing || (isCurrent && isActiveMember && !allowBasicToProUpgrade)}
                     onClick={() => {
-                      const isActiveMember =
-                        membership.subscriptionActive &&
-                        Boolean(membership.planExpiry && new Date(membership.planExpiry).getTime() > Date.now());
-                      if (isActiveMember) {
+                      if (isActiveMember && !allowBasicToProUpgrade) {
                         router.push("/dashboard");
                         return;
                       }
@@ -453,8 +454,14 @@ export function PricingIndiaClient({ currentPlan, userId }: PricingIndiaClientPr
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Processing...
                       </span>
+                    ) : isCurrent && isActiveMember && expiryLabel ? (
+                      `Active till ${expiryLabel}`
+                    ) : isCurrent && isActiveMember ? (
+                      "Plan Active"
+                    ) : allowBasicToProUpgrade ? (
+                      "Upgrade to Pro - \u20b91"
                     ) : isCurrent ? (
-                      "Pay to renew"
+                      "Current Plan"
                     ) : (
                       `Select ${plan.label}`
                     )}

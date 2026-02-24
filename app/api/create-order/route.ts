@@ -15,6 +15,18 @@ const PLAN_PRICES_INR: Record<PaidPlan, number> = {
   PRO_WEEKLY: 1
 };
 
+function normalizePlanTier(value: unknown): "FREE" | "BASIC" | "PRO" {
+  const normalized = String(value ?? "").toUpperCase();
+  if (normalized === "BASIC") return "BASIC";
+  if (normalized === "PRO") return "PRO";
+  return "FREE";
+}
+
+function resolveExpectedAmountInr(plan: PaidPlan, allowBasicToProUpgrade: boolean): number {
+  if (allowBasicToProUpgrade && plan === "PRO") return 1;
+  return PLAN_PRICES_INR[plan];
+}
+
 function isMissingPaymentsTableError(message: string) {
   const normalized = message.toLowerCase();
   return normalized.includes("public.payments") && normalized.includes("schema cache");
@@ -57,17 +69,11 @@ export async function POST(request: Request) {
     return apiError("Invalid userId.", 403, "FORBIDDEN");
   }
 
-  const expectedAmount = PLAN_PRICES_INR[plan];
-  const amount = Number(payload.amount);
-  if (!Number.isFinite(amount) || amount !== expectedAmount) {
-    return apiError(`Invalid amount for ${plan}.`, 400, "INVALID_AMOUNT");
-  }
-
   const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
 
   const { data: membership } = await supabase
     .from("users")
-    .select("plan_type,plan_end,plan_status,subscription_active")
+    .select("plan_tier,plan_type,plan_end,plan_status,subscription_active")
     .eq("id", user.id)
     .maybeSingle();
   const activeMembership = isProActive({
@@ -76,11 +82,20 @@ export async function POST(request: Request) {
     planStatus: (membership as { plan_status?: string | null } | null)?.plan_status,
     subscriptionActive: (membership as { subscription_active?: boolean | null } | null)?.subscription_active
   });
-  if (activeMembership) {
+  const currentPlanTier = normalizePlanTier((membership as { plan_tier?: string | null } | null)?.plan_tier);
+  const allowBasicToProUpgrade = activeMembership && currentPlanTier === "BASIC" && plan === "PRO";
+
+  if (activeMembership && !allowBasicToProUpgrade) {
     return apiError("Membership is already active. Redirect to dashboard.", 409, "ALREADY_ACTIVE_MEMBERSHIP", {
       expiryDate: (membership as { plan_end?: string | null } | null)?.plan_end ?? null,
       redirectTo: "/dashboard"
     });
+  }
+
+  const expectedAmount = resolveExpectedAmountInr(plan, allowBasicToProUpgrade);
+  const amount = Number(payload.amount);
+  if (!Number.isFinite(amount) || amount !== expectedAmount) {
+    return apiError(`Invalid amount for ${plan}.`, 400, "INVALID_AMOUNT");
   }
 
   try {

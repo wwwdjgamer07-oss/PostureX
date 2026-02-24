@@ -17,6 +17,18 @@ const PLAN_PRICES_INR: Record<PaidPlan, number> = {
   PRO_WEEKLY: 1
 };
 
+function normalizePlanTier(value: unknown): "FREE" | "BASIC" | "PRO" {
+  const normalized = String(value ?? "").toUpperCase();
+  if (normalized === "BASIC") return "BASIC";
+  if (normalized === "PRO") return "PRO";
+  return "FREE";
+}
+
+function resolveExpectedAmountInr(plan: PaidPlan, allowBasicToProUpgrade: boolean): number {
+  if (allowBasicToProUpgrade && plan === "PRO") return 1;
+  return PLAN_PRICES_INR[plan];
+}
+
 function isMissingPaymentsTableError(message: string) {
   const normalized = message.toLowerCase();
   return normalized.includes("public.payments") && normalized.includes("schema cache");
@@ -98,9 +110,25 @@ export async function POST(request: Request) {
 
   const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
 
+  const admin = createAdminSupabaseClient();
+  const { data: membership } = await admin
+    .from("users")
+    .select("plan_tier,plan_type,plan_end,plan_status,subscription_active")
+    .eq("id", user.id)
+    .maybeSingle();
+  const activeMembership = isProActive({
+    planType: (membership as { plan_type?: string | null } | null)?.plan_type,
+    planEnd: (membership as { plan_end?: string | null } | null)?.plan_end,
+    planStatus: (membership as { plan_status?: string | null } | null)?.plan_status,
+    subscriptionActive: (membership as { subscription_active?: boolean | null } | null)?.subscription_active
+  });
+  const currentPlanTier = normalizePlanTier((membership as { plan_tier?: string | null } | null)?.plan_tier);
+  const allowBasicToProUpgrade = activeMembership && currentPlanTier === "BASIC" && plan === "PRO";
+  const expectedAmountInr = resolveExpectedAmountInr(plan, allowBasicToProUpgrade);
+
   try {
     const payment = await razorpay.payments.fetch(paymentId);
-    const expectedAmountPaise = PLAN_PRICES_INR[plan] * 100;
+    const expectedAmountPaise = expectedAmountInr * 100;
 
     if (payment.status !== "captured" && payment.status !== "authorized") {
       return apiError("Payment is not captured yet.", 400, "PAYMENT_NOT_CAPTURED");
@@ -113,7 +141,6 @@ export async function POST(request: Request) {
     return apiError("Unable to validate payment with Razorpay.", 400, "PAYMENT_VALIDATION_FAILED");
   }
 
-  const admin = createAdminSupabaseClient();
   const now = new Date();
   const nowIso = now.toISOString();
   const planTier = resolvePlanTier(plan);
@@ -121,19 +148,7 @@ export async function POST(request: Request) {
   const expiryDate = new Date(now.getTime() + resolvePeriodDays(plan) * 24 * 60 * 60 * 1000);
   const expiryIso = expiryDate.toISOString();
   const planLower = plan.toLowerCase();
-
-  const { data: membership } = await admin
-    .from("users")
-    .select("plan_type,plan_end,plan_status,subscription_active")
-    .eq("id", user.id)
-    .maybeSingle();
-  const activeMembership = isProActive({
-    planType: (membership as { plan_type?: string | null } | null)?.plan_type,
-    planEnd: (membership as { plan_end?: string | null } | null)?.plan_end,
-    planStatus: (membership as { plan_status?: string | null } | null)?.plan_status,
-    subscriptionActive: (membership as { subscription_active?: boolean | null } | null)?.subscription_active
-  });
-  if (activeMembership) {
+  if (activeMembership && !allowBasicToProUpgrade) {
     return apiOk({
       success: true,
       plan: planTier,
@@ -199,7 +214,7 @@ export async function POST(request: Request) {
         : admin.from("payments").insert({
             user_id: user.id,
             plan: planLower,
-            amount_inr: PLAN_PRICES_INR[plan],
+            amount_inr: expectedAmountInr,
             payment_method: "RAZORPAY",
             status: "approved"
           });
