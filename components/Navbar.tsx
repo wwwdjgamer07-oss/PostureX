@@ -119,7 +119,7 @@ export function Navbar() {
       <div className="px-shell flex h-16 items-center justify-between gap-4">
         <Link href="/" className="group inline-flex items-center gap-3">
           <div className={cn(
-            "px-brand-logo grid h-9 w-9 place-items-center overflow-hidden rounded-xl border border-cyan-300/40 bg-slate-950 text-xs font-bold text-cyan-200 transition group-hover:scale-[1.03] group-hover:shadow-[0_0_20px_rgba(34,211,238,0.35)]",
+            "px-brand-logo grid h-9 w-9 place-items-center overflow-hidden rounded-xl border border-cyan-300/55 bg-slate-950 text-sm font-extrabold leading-none text-cyan-200 transition group-hover:scale-[1.03] group-hover:shadow-[0_0_20px_rgba(34,211,238,0.35)]",
             isObsidianSkull ? "px-brand-logo-skull border-violet-300/50 bg-violet-400/15 text-violet-100" : ""
           )}>
             {isObsidianSkull ? (
@@ -127,9 +127,9 @@ export function Navbar() {
             ) : "PX"}
           </div>
           <div className="hidden sm:block">
-            <p className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">PX</p>
+            <p className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">PostureX</p>
             <p className={cn("text-[10px] uppercase tracking-[0.22em] text-slate-600 dark:text-slate-400", isObsidianSkull ? "text-violet-300 dark:text-violet-200/85" : "")}>
-              {isObsidianSkull ? "Obsidian Skull Edition" : "PX Intelligence Engine"}
+              {isObsidianSkull ? "Obsidian Skull Edition" : "Posture Intelligence Engine"}
             </p>
           </div>
         </Link>

@@ -7,7 +7,7 @@ import { Navbar } from "@/components/Navbar";
 import { PXPersonalizationController } from "@/components/PXPersonalizationController";
 import { ThemeLoader } from "@/components/ThemeLoader";
 import { ThemeController } from "@/components/ThemeController";
-import { getAppUrl } from "@/lib/env";
+import { getAppName, getAppUrl } from "@/lib/env";
 import { Toaster } from "sonner";
 import "@/styles/globals.css";
 
@@ -16,25 +16,26 @@ const GlobalChatbot = dynamic(
   { ssr: false }
 );
 
+const appName = getAppName();
 const appUrl = getAppUrl();
 
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
-  title: "PX",
+  title: "PostureX",
   description: "AI posture intelligence & PX Play arcade",
-  applicationName: "PX",
+  applicationName: appName,
   openGraph: {
-    title: "PX",
+    title: "PostureX",
     description: "AI posture intelligence & PX Play arcade",
     url: appUrl,
-    siteName: "PX",
+    siteName: appName,
     type: "website",
     images: [
       {
         url: "/og-image.svg",
         width: 1200,
         height: 630,
-        alt: "PX"
+        alt: "PostureX"
       }
     ]
   },
@@ -45,7 +46,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "PX",
+    title: "PostureX",
     description: "AI posture intelligence & PX Play arcade",
     images: ["/og-image.svg"]
   }

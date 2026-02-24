@@ -1,12 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
   <defs>
-    <linearGradient id="g" x1="20" y1="20" x2="236" y2="236" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#00E5FF"/>
-      <stop offset="1" stop-color="#2962FF"/>
+    <linearGradient id="bg" x1="32" y1="24" x2="224" y2="232" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1324" />
+      <stop offset="1" stop-color="#050A14" />
+    </linearGradient>
+    <linearGradient id="stroke" x1="24" y1="24" x2="232" y2="232" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6EE7F9" />
+      <stop offset="1" stop-color="#3B82F6" />
+    </linearGradient>
+    <linearGradient id="text" x1="64" y1="78" x2="192" y2="178" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A5F3FC" />
+      <stop offset="1" stop-color="#38BDF8" />
     </linearGradient>
   </defs>
-  <rect width="256" height="256" rx="56" fill="#040917"/>
-  <rect x="18" y="18" width="220" height="220" rx="44" stroke="url(#g)" stroke-opacity="0.5" stroke-width="4"/>
-  <path d="M86 188V76h26v84h32V76h26v112H86Z" fill="url(#g)"/>
-  <circle cx="128" cy="52" r="16" fill="#00E5FF"/>
+  <rect width="256" height="256" rx="54" fill="url(#bg)" />
+  <rect x="14" y="14" width="228" height="228" rx="42" stroke="url(#stroke)" stroke-width="6" />
+  <text
+    x="128"
+    y="156"
+    text-anchor="middle"
+    font-size="96"
+    font-family="Segoe UI, Arial, sans-serif"
+    font-weight="900"
+    letter-spacing="-4"
+    fill="url(#text)"
+  >
+    PX
+  </text>
 </svg>
