@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -119,12 +120,21 @@ export function Navbar() {
       <div className="px-shell flex h-16 items-center justify-between gap-4">
         <Link href="/" className="group inline-flex items-center gap-3">
           <div className={cn(
-            "px-brand-logo grid h-9 w-9 place-items-center overflow-hidden rounded-xl border border-cyan-300/40 bg-cyan-300/10 text-xs font-bold text-cyan-200 transition group-hover:scale-[1.03] group-hover:shadow-[0_0_20px_rgba(34,211,238,0.35)]",
+            "px-brand-logo grid h-9 w-9 place-items-center overflow-hidden rounded-xl border border-cyan-300/40 bg-slate-950 text-xs font-bold text-cyan-200 transition group-hover:scale-[1.03] group-hover:shadow-[0_0_20px_rgba(34,211,238,0.35)]",
             isObsidianSkull ? "px-brand-logo-skull border-violet-300/50 bg-violet-400/15 text-violet-100" : ""
           )}>
             {isObsidianSkull ? (
               <img src="/skull1.jpeg" alt="Obsidian Skull logo" className="h-full w-full rounded-md object-cover" />
-            ) : "PX"}
+            ) : (
+              <Image
+                src="/icon.svg"
+                alt="PostureX logo"
+                width={18}
+                height={18}
+                className="h-[18px] w-[18px]"
+                priority
+              />
+            )}
           </div>
           <div className="hidden sm:block">
             <p className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">PostureX</p>
