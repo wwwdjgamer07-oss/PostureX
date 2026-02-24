@@ -41,6 +41,7 @@ export function SessionScreenClient() {
   const [sensorAvailable, setSensorAvailable] = useState(false);
   const [sensorPhoneOnly, setSensorPhoneOnly] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [isPhoneLayout, setIsPhoneLayout] = useState(false);
   const [sensorAutoFailed, setSensorAutoFailed] = useState(false);
   const [latestSensorFrame, setLatestSensorFrame] = useState<SensorPostureFrame | null>(null);
 
@@ -114,6 +115,15 @@ export function SessionScreenClient() {
     setSensorAvailable(availability.supported);
     setSensorPhoneOnly(availability.isPhone);
     setIsMobileDevice(detectMobile());
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const query = window.matchMedia("(max-width: 768px)");
+    const sync = () => setIsPhoneLayout(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
   }, []);
 
   const shouldAutoSensorStart = useMemo(
@@ -294,6 +304,126 @@ export function SessionScreenClient() {
     }
   }, [postCoachEvent, postureScore, sessionSeconds]);
 
+  const trackingPanel = resolvedSource === "camera" ? (
+    <CameraSession
+      onMetrics={(next) => {
+        setMetrics(next);
+      }}
+      onTick={setSessionSeconds}
+      onCoachEvent={postCoachEvent}
+      onPostureFrame={(frame) => {
+        void persistPostureRecord(frame);
+      }}
+      onSessionIdChange={(nextId) => {
+        sessionIdRef.current = nextId;
+      }}
+      onSessionStop={(durationSeconds, alertCount, sessionId, breakTaken) => {
+        void stopSessionAndSave(durationSeconds, alertCount, sessionId, breakTaken, "camera");
+      }}
+      onPermissionChange={setPermissionStatus}
+    />
+  ) : (
+    <SensorSession
+      onMetrics={(next) => {
+        setMetrics(next);
+      }}
+      onTick={setSessionSeconds}
+      onCoachEvent={postCoachEvent}
+      onSensorFrame={setLatestSensorFrame}
+      onPostureFrame={(frame) => {
+        void persistPostureRecord(frame);
+      }}
+      onSessionIdChange={(nextId) => {
+        sessionIdRef.current = nextId;
+      }}
+      onSessionStop={(durationSeconds, alertCount, sessionId, breakTaken) => {
+        void stopSessionAndSave(durationSeconds, alertCount, sessionId, breakTaken, "sensor");
+      }}
+      autoStart={shouldAutoSensorStart}
+      onAutoStartFailed={() => {
+        setSensorAutoFailed(true);
+        setResolvedSource("camera");
+      }}
+      onPermissionChange={setPermissionStatus}
+    />
+  );
+
+  if (isPhoneLayout) {
+    return (
+      <div className="px-shell space-y-3 pb-4">
+        <header className="rounded-2xl border border-cyan-400/25 bg-[#061325] p-4">
+          <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-200">Session Runtime</p>
+          <p className="mt-1 text-lg font-semibold text-white">Live Posture Tracking</p>
+          <div className="mt-3 inline-flex rounded-xl border border-slate-600/60 bg-[#091a33] p-1">
+            {availableModes.map((mode) => {
+              const sensorDisabled = mode === "sensor" && !sensorAvailable;
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setPostureMode(mode)}
+                  disabled={sensorDisabled}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] transition ${
+                    postureMode === mode ? "bg-cyan-500/25 text-cyan-100" : "text-slate-300"
+                  }`}
+                >
+                  {mode}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-xs text-slate-300">
+            Active source: <span className="font-semibold text-cyan-300">{resolvedSource === "camera" ? "Camera Tracking" : "Sensor Tracking"}</span>
+          </p>
+        </header>
+
+        <section className="rounded-2xl border border-cyan-400/25 bg-[#04111f] p-2">{trackingPanel}</section>
+
+        <article className="rounded-2xl border border-cyan-400/25 bg-[#071325] p-4">
+          <div className="flex items-start gap-3">
+            <div className="grid h-12 w-12 place-items-center rounded-full border border-cyan-300/55 bg-cyan-400/15 text-lg font-bold text-cyan-100">PX</div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-cyan-200">PX Coach</p>
+              <div className="mt-1 rounded-2xl border border-cyan-400/30 bg-[#0a1930] px-3 py-2 text-sm text-slate-100">{coachMessage}</div>
+            </div>
+          </div>
+        </article>
+
+        <article className="rounded-2xl border border-cyan-400/25 bg-[#071325] p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-base font-semibold text-white">Posture Score</p>
+            <Video className="h-4 w-4 text-cyan-300" />
+          </div>
+          <div className="mt-4 grid place-items-center">
+            <div className="relative grid h-36 w-36 place-items-center rounded-full border border-cyan-300/35 bg-[#020a1a] shadow-[0_0_30px_rgba(34,211,238,0.15)]">
+              <div className="absolute inset-3 rounded-full border border-cyan-300/25" />
+              <p className="text-4xl font-semibold text-cyan-100">{postureScore}</p>
+            </div>
+          </div>
+        </article>
+
+        <article className="rounded-2xl border border-cyan-400/25 bg-[#071325] p-4">
+          <p className="text-base font-semibold text-white">Risk Status</p>
+          <div className={`mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${riskTone[metrics.riskLevel]}`}>{metrics.riskLevel}</div>
+          <div className="mt-4 space-y-2 text-sm text-slate-200">
+            <p>Alignment: {Math.round(metrics.alignment)}%</p>
+            <p>Stability: {Math.round(metrics.stability)}%</p>
+            <p>Symmetry: {Math.round(metrics.symmetry)}%</p>
+          </div>
+        </article>
+
+        <article className="rounded-2xl border border-cyan-400/25 bg-[#071325] p-4">
+          <p className="text-base font-semibold text-white">Session Timer</p>
+          <p className="mt-2 inline-flex items-center gap-2 text-2xl font-semibold text-cyan-100">
+            <Timer className="h-5 w-5" />
+            {sessionSeconds}s
+          </p>
+          <p className="mt-2 text-xs text-slate-400">Camera permission: {permissionStatus}</p>
+        </article>
+      </div>
+    );
+  }
+
   return (
     <div className="px-shell space-y-6">
       <header className="px-panel px-reveal p-6" style={{ animationDelay: "50ms" }}>
@@ -325,49 +455,7 @@ export function SessionScreenClient() {
 
       <div className="space-y-4">
         <section className="space-y-4 px-reveal" style={{ animationDelay: "120ms" }}>
-          {resolvedSource === "camera" ? (
-            <CameraSession
-              onMetrics={(next) => {
-                setMetrics(next);
-              }}
-              onTick={setSessionSeconds}
-              onCoachEvent={postCoachEvent}
-              onPostureFrame={(frame) => {
-                void persistPostureRecord(frame);
-              }}
-              onSessionIdChange={(nextId) => {
-                sessionIdRef.current = nextId;
-              }}
-              onSessionStop={(durationSeconds, alertCount, sessionId, breakTaken) => {
-                void stopSessionAndSave(durationSeconds, alertCount, sessionId, breakTaken, "camera");
-              }}
-              onPermissionChange={setPermissionStatus}
-            />
-          ) : (
-            <SensorSession
-              onMetrics={(next) => {
-                setMetrics(next);
-              }}
-              onTick={setSessionSeconds}
-              onCoachEvent={postCoachEvent}
-              onSensorFrame={setLatestSensorFrame}
-              onPostureFrame={(frame) => {
-                void persistPostureRecord(frame);
-              }}
-              onSessionIdChange={(nextId) => {
-                sessionIdRef.current = nextId;
-              }}
-              onSessionStop={(durationSeconds, alertCount, sessionId, breakTaken) => {
-                void stopSessionAndSave(durationSeconds, alertCount, sessionId, breakTaken, "sensor");
-              }}
-              autoStart={shouldAutoSensorStart}
-              onAutoStartFailed={() => {
-                setSensorAutoFailed(true);
-                setResolvedSource("camera");
-              }}
-              onPermissionChange={setPermissionStatus}
-            />
-          )}
+          {trackingPanel}
         </section>
 
         <section className="space-y-4">
