@@ -644,9 +644,9 @@ function LanderGame({
     maxHorizontalSpeed: 14,
     maxTiltRad: 0.26
   };
-  const width = 1400;
-  const height = 700;
-  const worldWidth = 5600;
+  const width = isTouch ? 900 : 1400;
+  const height = isTouch ? 1250 : 700;
+  const worldWidth = width * 4;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [stats, setStats] = useState<ArcadeStats>({ score: 0, level: 1, lives: 3, over: false });
@@ -1439,12 +1439,17 @@ function PongGame({
   theme: ArcadeTheme;
 }) {
   const isTouch = useIsTouchDevice();
+  const ARENA_W = 400;
+  const ARENA_H = isTouch ? 640 : 400;
+  const PADDLE_H = 60;
+  const PADDLE_X = 10;
+  const PADDLE_W = 8;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [stats, setStats] = useState<ArcadeStats>({ score: 0, level: 1, lives: 3, over: false });
-  const playerY = useRef(160);
-  const aiY = useRef(160);
-  const ball = useRef({ x: 200, y: 200, vx: 180, vy: 120 });
+  const playerY = useRef((ARENA_H - PADDLE_H) / 2);
+  const aiY = useRef((ARENA_H - PADDLE_H) / 2);
+  const ball = useRef({ x: ARENA_W / 2, y: ARENA_H / 2, vx: 180, vy: 120 });
   const lastEnabledRef = useRef(false);
   const trailRef = useRef<Array<{ x: number; y: number }>>([]);
   const [impactFlash, setImpactFlash] = useState(0);
@@ -1453,20 +1458,20 @@ function PongGame({
 
   const reset = useCallback(() => {
     setStats({ score: 0, level: 1, lives: 3, over: false });
-    playerY.current = 160;
-    aiY.current = 160;
-    ball.current = { x: 200, y: 200, vx: 180, vy: 120 };
+    playerY.current = (ARENA_H - PADDLE_H) / 2;
+    aiY.current = (ARENA_H - PADDLE_H) / 2;
+    ball.current = { x: ARENA_W / 2, y: ARENA_H / 2, vx: 180, vy: 120 };
     trailRef.current = [];
     setImpactFlash(0);
     setShake(0);
-  }, []);
+  }, [ARENA_H, ARENA_W]);
 
   const movePaddleFromClientY = useCallback((clientY: number) => {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
     const y = clientY - rect.top;
-    playerY.current = clamp(y - 30, 0, 340);
-  }, []);
+    playerY.current = clamp(y - PADDLE_H / 2, 0, ARENA_H - PADDLE_H);
+  }, [ARENA_H]);
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
@@ -1493,23 +1498,23 @@ function PongGame({
         b.y = 6;
         b.vy = Math.abs(b.vy);
       }
-      if (b.y > 394) {
-        b.y = 394;
+      if (b.y > ARENA_H - 6) {
+        b.y = ARENA_H - 6;
         b.vy = -Math.abs(b.vy);
       }
 
-      aiY.current += (b.y - (aiY.current + 30)) * 0.06;
-      aiY.current = clamp(aiY.current, 0, 340);
+      aiY.current += (b.y - (aiY.current + PADDLE_H / 2)) * 0.06;
+      aiY.current = clamp(aiY.current, 0, ARENA_H - PADDLE_H);
 
-      if (b.x < 24 && b.y > playerY.current && b.y < playerY.current + 60) {
+      if (b.x < PADDLE_X + PADDLE_W + 6 && b.y > playerY.current && b.y < playerY.current + PADDLE_H) {
         b.vx = Math.abs(b.vx) + 6;
-        b.x = 24;
+        b.x = PADDLE_X + PADDLE_W + 6;
         setStats((s) => ({ ...s, score: s.score + 5, level: 1 + Math.floor((s.score + 5) / 30) }));
         setImpactFlash(1);
       }
-      if (b.x > 376 && b.y > aiY.current && b.y < aiY.current + 60) {
+      if (b.x > ARENA_W - (PADDLE_X + PADDLE_W + 6) && b.y > aiY.current && b.y < aiY.current + PADDLE_H) {
         b.vx = -Math.abs(b.vx) - 4;
-        b.x = 376;
+        b.x = ARENA_W - (PADDLE_X + PADDLE_W + 6);
         setImpactFlash(1);
       }
 
@@ -1521,10 +1526,10 @@ function PongGame({
           return;
         }
         setStats((s) => ({ ...s, lives }));
-        ball.current = { x: 200, y: 200, vx: 180, vy: 120 };
+        ball.current = { x: ARENA_W / 2, y: ARENA_H / 2, vx: 180, vy: 120 };
         setShake(1);
       }
-      if (b.x > 400) {
+      if (b.x > ARENA_W) {
         const score = stats.score + 20;
         setStats((s) => ({ ...s, score, over: true, won: true }));
         onFinish(score, true);
@@ -1543,8 +1548,8 @@ function PongGame({
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
-      const width = 400;
-      const height = 400;
+      const width = ARENA_W;
+      const height = ARENA_H;
       const scale = Math.min(canvas.width / width, canvas.height / height) || 1;
       const offsetX = (canvas.width - width * scale) / 2;
       const offsetY = (canvas.height - height * scale) / 2;
@@ -1557,18 +1562,18 @@ function PongGame({
       ctx.save();
       ctx.translate(shakeOffset, 0);
       ctx.fillStyle = "#020814";
-      ctx.fillRect(0, 0, 400, 400);
+      ctx.fillRect(0, 0, ARENA_W, ARENA_H);
       ctx.strokeStyle = arenaGlow;
       ctx.setLineDash([6, 8]);
       ctx.beginPath();
-      ctx.moveTo(200, 0);
-      ctx.lineTo(200, 400);
+      ctx.moveTo(ARENA_W / 2, 0);
+      ctx.lineTo(ARENA_W / 2, ARENA_H);
       ctx.stroke();
       ctx.setLineDash([]);
 
       ctx.fillStyle = paddleSkin === "violet" ? "#a78bfa" : paddleSkin === "gold" ? "#fbbf24" : theme === "toxic" ? "#84cc16" : theme === "sunset" ? "#fb923c" : "#22d3ee";
-      ctx.fillRect(10, playerY.current, 8, 60);
-      ctx.fillRect(382, aiY.current, 8, 60);
+      ctx.fillRect(PADDLE_X, playerY.current, PADDLE_W, PADDLE_H);
+      ctx.fillRect(ARENA_W - (PADDLE_X + PADDLE_W), aiY.current, PADDLE_W, PADDLE_H);
 
       const b = ball.current;
       trailRef.current.forEach((point, idx) => {
@@ -1587,7 +1592,7 @@ function PongGame({
       ctx.fill();
       if (impactFlash > 0) {
         ctx.fillStyle = `rgba(255,255,255,${impactFlash * 0.28})`;
-        ctx.fillRect(0, 0, 400, 400);
+        ctx.fillRect(0, 0, ARENA_W, ARENA_H);
       }
       ctx.shadowBlur = 0;
       ctx.restore();
@@ -1622,8 +1627,8 @@ function PongGame({
         </div>
         {isTouch ? (
           <div className="absolute left-0 right-0 bottom-0 pb-[env(safe-area-inset-bottom)] p-3 grid grid-cols-2 gap-2 bg-black/40 backdrop-blur-xl">
-            <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-2 text-cyan-100" onClick={() => { playerY.current = clamp(playerY.current - 28, 0, 340); }}>Up</button>
-            <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-2 text-cyan-100" onClick={() => { playerY.current = clamp(playerY.current + 28, 0, 340); }}>Down</button>
+            <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-2 text-cyan-100" onClick={() => { playerY.current = clamp(playerY.current - 28, 0, ARENA_H - PADDLE_H); }}>Up</button>
+            <button type="button" className="rounded-lg border border-cyan-300/40 bg-slate-900/65 py-2 text-cyan-100" onClick={() => { playerY.current = clamp(playerY.current + 28, 0, ARENA_H - PADDLE_H); }}>Down</button>
           </div>
         ) : null}
       </div>
@@ -1635,7 +1640,7 @@ function BreakoutGame({ onFinish, enabled }: { onFinish: (score: number, won: bo
   const isTouch = useIsTouchDevice();
   type Brick = { x: number; y: number; w: number; h: number; alive: boolean; hp: number; maxHp: number; color: string; score: number };
   const WIDTH = 400;
-  const HEIGHT = 480;
+  const HEIGHT = isTouch ? 760 : 480;
   const TOP = 18;
   const LEFT_WALL = 12;
   const RIGHT_WALL = WIDTH - 12;
@@ -1678,9 +1683,9 @@ function BreakoutGame({ onFinish, enabled }: { onFinish: (score: number, won: bo
     bricks.current = next;
     paddleW.current = Math.max(62, 90 - (level - 1) * 6);
     const speed = 165 + level * 20;
-    ball.current = { x: WIDTH / 2, y: 300, vx: speed * (Math.random() > 0.5 ? 1 : -1), vy: -speed };
+    ball.current = { x: WIDTH / 2, y: HEIGHT * 0.62, vx: speed * (Math.random() > 0.5 ? 1 : -1), vy: -speed };
     paddleX.current = (WIDTH - paddleW.current) / 2;
-  }, []);
+  }, [HEIGHT]);
 
   const reset = useCallback(() => {
     setStats({ score: 0, level: 1, lives: 3, over: false });
@@ -1765,7 +1770,7 @@ function BreakoutGame({ onFinish, enabled }: { onFinish: (score: number, won: bo
         } else {
           setStats((s) => ({ ...s, lives }));
           const speed = 165 + stats.level * 20;
-          ball.current = { x: WIDTH / 2, y: 300, vx: speed * (Math.random() > 0.5 ? 1 : -1), vy: -speed };
+          ball.current = { x: WIDTH / 2, y: HEIGHT * 0.62, vx: speed * (Math.random() > 0.5 ? 1 : -1), vy: -speed };
         }
       }
     },
