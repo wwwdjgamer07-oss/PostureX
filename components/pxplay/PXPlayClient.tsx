@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Brain, Brackets, CircleDot, Gamepad2, Grid3X3, Layers, Rocket } from "lucide-react";
+import { Brain, Brackets, CircleDot, Gamepad2, Grid3X3, Layers, Maximize2, Minimize2, Rocket, Volume2, VolumeX, X } from "lucide-react";
 
 type GameId = "snake" | "lander" | "xo" | "pong" | "breakout" | "memory";
 
@@ -91,6 +91,7 @@ function GameShell({ title, subtitle, onExit, children, footer }: { title: strin
 }
 
 function SnakeGame({ onExit }: { onExit: () => void }) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -99,10 +100,49 @@ function SnakeGame({ onExit }: { onExit: () => void }) {
   const nextDirRef = useRef({ x: 1, y: 0 });
   const foodRef = useRef({ x: 15, y: 10 });
   const accumRef = useRef(0);
+  const audioRef = useRef<AudioContext | null>(null);
   const [score, setScore] = useState(0);
+  const [best, setBest] = useState(0);
   const [over, setOver] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useCanvasResize(containerRef, canvasRef);
+
+  useEffect(() => {
+    try {
+      const saved = Number(window.localStorage.getItem("px_google_snake_best") ?? 0);
+      if (Number.isFinite(saved) && saved > 0) setBest(saved);
+    } catch {
+      // ignore storage failures
+    }
+  }, []);
+
+  const ensureAudio = useCallback(() => {
+    if (muted) return null;
+    if (!audioRef.current) audioRef.current = new window.AudioContext();
+    if (audioRef.current.state === "suspended") {
+      void audioRef.current.resume();
+    }
+    return audioRef.current;
+  }, [muted]);
+
+  const tone = useCallback((freq: number, ms: number, type: OscillatorType = "square", volume = 0.03) => {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.value = volume;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    const now = ctx.currentTime;
+    gain.gain.setValueAtTime(volume, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + ms / 1000);
+    osc.start(now);
+    osc.stop(now + ms / 1000);
+  }, [ensureAudio]);
 
   const restart = useCallback(() => {
     snakeRef.current = [{ x: 9, y: 10 }, { x: 8, y: 10 }, { x: 7, y: 10 }];
@@ -112,13 +152,31 @@ function SnakeGame({ onExit }: { onExit: () => void }) {
     accumRef.current = 0;
     setScore(0);
     setOver(false);
-  }, []);
+    tone(440, 65, "triangle", 0.02);
+  }, [tone]);
 
   const setDir = useCallback((x: number, y: number) => {
     const d = dirRef.current;
     if (d.x === -x && d.y === -y) return;
     nextDirRef.current = { x, y };
+    tone(280, 24, "square", 0.012);
+  }, [tone]);
+
+  useEffect(() => {
+    const onFull = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", onFull);
+    return () => document.removeEventListener("fullscreenchange", onFull);
   }, []);
+
+  const toggleFullscreen = async () => {
+    const root = rootRef.current;
+    if (!root) return;
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      return;
+    }
+    await root.requestFullscreen();
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -128,6 +186,7 @@ function SnakeGame({ onExit }: { onExit: () => void }) {
       if (k === "arrowleft" || k === "a") setDir(-1, 0);
       if (k === "arrowright" || k === "d") setDir(1, 0);
       if (k === "r") restart();
+      if (k === "m") setMuted((v) => !v);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -154,10 +213,24 @@ function SnakeGame({ onExit }: { onExit: () => void }) {
         const hitSelf = snakeRef.current.some((s) => s.x === moved.x && s.y === moved.y);
         if (hitWall || hitSelf) {
           setOver(true);
+          tone(180, 220, "sawtooth", 0.045);
         } else {
           snakeRef.current = [moved, ...snakeRef.current];
           if (moved.x === foodRef.current.x && moved.y === foodRef.current.y) {
-            setScore((v) => v + 10);
+            setScore((v) => {
+              const nextScore = v + 1;
+              if (nextScore > best) {
+                setBest(nextScore);
+                try {
+                  window.localStorage.setItem("px_google_snake_best", String(nextScore));
+                } catch {
+                  // ignore storage failures
+                }
+              }
+              return nextScore;
+            });
+            tone(740, 65, "triangle", 0.03);
+            tone(930, 75, "triangle", 0.02);
             let next = foodRef.current;
             do {
               next = { x: Math.floor(Math.random() * GRID), y: Math.floor(Math.random() * GRID) };
@@ -177,39 +250,94 @@ function SnakeGame({ onExit }: { onExit: () => void }) {
     const oy = Math.floor((canvas.height - boardH) / 2);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#061022";
+    ctx.fillStyle = "#4d8430";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#94d34f";
+    ctx.fillStyle = "#a5d64f";
     ctx.fillRect(ox, oy, boardW, boardH);
-    ctx.fillStyle = "#9fd95a";
-    for (let y = 0; y < GRID; y += 1) for (let x = 0; x < GRID; x += 1) if ((x + y) % 2 === 0) ctx.fillRect(ox + x * cell, oy + y * cell, cell, cell);
+    ctx.fillStyle = "#9fce49";
+    for (let y = 0; y < GRID; y += 1) {
+      for (let x = 0; x < GRID; x += 1) {
+        if ((x + y) % 2 === 0) ctx.fillRect(ox + x * cell, oy + y * cell, cell, cell);
+      }
+    }
+
     snakeRef.current.forEach((p, i) => {
-      ctx.fillStyle = i === 0 ? "#60a5fa" : "#3b82f6";
-      ctx.fillRect(ox + p.x * cell + 1, oy + p.y * cell + 1, cell - 2, cell - 2);
+      ctx.fillStyle = i === 0 ? "#2f5fd2" : "#4a74de";
+      const radius = Math.max(3, Math.floor(cell * 0.38));
+      const cx = ox + p.x * cell + cell / 2;
+      const cy = oy + p.y * cell + cell / 2;
+      ctx.beginPath();
+      ctx.roundRect(cx - radius, cy - radius, radius * 2, radius * 2, radius * 0.95);
+      ctx.fill();
     });
-    ctx.fillStyle = "#dc2626";
-    ctx.fillRect(ox + foodRef.current.x * cell + 2, oy + foodRef.current.y * cell + 2, cell - 4, cell - 4);
+
+    ctx.fillStyle = "#ef4444";
+    const fx = ox + foodRef.current.x * cell + cell / 2;
+    const fy = oy + foodRef.current.y * cell + cell / 2;
+    ctx.beginPath();
+    ctx.arc(fx, fy, Math.max(2, cell * 0.18), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#16a34a";
+    ctx.fillRect(fx - 1, fy - Math.max(3, cell * 0.22), 2, Math.max(2, cell * 0.1));
+
+    if (over) {
+      ctx.fillStyle = "rgba(46,79,30,0.72)";
+      ctx.fillRect(ox + boardW * 0.35, oy + boardH * 0.15, boardW * 0.3, 72);
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "center";
+      ctx.font = "bold 16px ui-sans-serif, system-ui";
+      ctx.fillText("Press Restart", ox + boardW / 2, oy + boardH * 0.22 + 8);
+    }
   }, true);
 
   return (
-    <GameShell title="Snake" subtitle="Swipe on board" onExit={onExit} footer={<div className="flex items-center gap-3"><p className="flex-1 text-sm text-cyan-100">Score: {score}</p><button type="button" onClick={restart} className="rounded-xl border border-cyan-300/40 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100">Restart</button></div>}>
-      <div ref={containerRef} className="h-full w-full">
-        <canvas ref={canvasRef} className="h-full w-full touch-none" onTouchStart={(e) => {
-          const t = e.touches[0];
-          if (!t) return;
-          touchStartRef.current = { x: t.clientX, y: t.clientY };
-        }} onTouchEnd={(e) => {
-          const t = e.changedTouches[0];
-          const start = touchStartRef.current;
-          if (!t || !start) return;
-          const dx = t.clientX - start.x;
-          const dy = t.clientY - start.y;
-          if (Math.abs(dx) < 14 && Math.abs(dy) < 14) return;
-          if (Math.abs(dx) > Math.abs(dy)) setDir(dx > 0 ? 1 : -1, 0);
-          else setDir(0, dy > 0 ? 1 : -1);
-        }} />
+    <div ref={rootRef} className="fixed inset-0 z-50 flex min-h-[100dvh] flex-col bg-[#4d8430] text-white">
+      <header className="flex h-14 items-center justify-between border-b border-[#3f7026] bg-[#4d8430] px-4">
+        <div className="flex items-center gap-8">
+          <p className="flex items-center gap-2 text-3xl font-semibold"><span>🍎</span><span className="text-white">{score}</span></p>
+          <p className="flex items-center gap-2 text-3xl font-semibold"><span>🏆</span><span className="text-white">{best}</span></p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={toggleFullscreen} className="rounded-md p-1.5 text-white/95">
+            {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+          </button>
+          <button type="button" onClick={() => setMuted((v) => !v)} className="rounded-md p-1.5 text-white/95">
+            {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+          </button>
+          <button type="button" onClick={onExit} className="rounded-md p-1.5 text-white/95">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      </header>
+      <div className="min-h-0 flex-1 p-5">
+        <div ref={containerRef} className="mx-auto h-full w-full max-w-[980px] rounded-sm border-[5px] border-[#6ea33f] bg-[#a5d64f]">
+          <canvas
+            ref={canvasRef}
+            className="h-full w-full touch-none"
+            onTouchStart={(e) => {
+              const t = e.touches[0];
+              if (!t) return;
+              touchStartRef.current = { x: t.clientX, y: t.clientY };
+            }}
+            onTouchEnd={(e) => {
+              const t = e.changedTouches[0];
+              const start = touchStartRef.current;
+              if (!t || !start) return;
+              const dx = t.clientX - start.x;
+              const dy = t.clientY - start.y;
+              if (Math.abs(dx) < 14 && Math.abs(dy) < 14) return;
+              if (Math.abs(dx) > Math.abs(dy)) setDir(dx > 0 ? 1 : -1, 0);
+              else setDir(0, dy > 0 ? 1 : -1);
+            }}
+          />
+        </div>
       </div>
-    </GameShell>
+      <div className="border-t border-[#3f7026] bg-[#4d8430] p-3 pb-[env(safe-area-inset-bottom)]">
+        <button type="button" onClick={restart} className="w-full rounded-lg border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold text-white">
+          Restart
+        </button>
+      </div>
+    </div>
   );
 }
 function LanderGame({ onExit }: { onExit: () => void }) {
