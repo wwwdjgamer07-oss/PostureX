@@ -28,12 +28,6 @@ interface GameTile {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-interface GameSkin {
-  frameClass: string;
-  hudClass: string;
-  surfaceClass: string;
-}
-
 const themeMeta: Record<ArcadeTheme, { label: string; frame: string }> = {
   neon: { label: "Neon Core", frame: "from-cyan-400/14 via-blue-500/10 to-transparent" },
   toxic: { label: "Toxic Pulse", frame: "from-lime-400/14 via-emerald-500/10 to-transparent" },
@@ -335,158 +329,6 @@ function useAnimationFrame(loop: (dt: number) => void, enabled: boolean) {
       prevRef.current = 0;
     };
   }, [enabled, loop]);
-}
-
-function GameFrame({
-  title,
-  stats,
-  best,
-  streak,
-  theme,
-  skin,
-  rewardsEarned,
-  onRestart,
-  onExit,
-  onFullscreen,
-  onTutorial,
-  footerExtras,
-  children
-}: {
-  title: string;
-  stats: ArcadeStats;
-  best: number;
-  streak: number;
-  theme: ArcadeTheme;
-  skin: GameSkin;
-  rewardsEarned: { coins: number; gems: number };
-  onRestart: () => void;
-  onExit: () => void;
-  onFullscreen: () => void;
-  onTutorial: () => void;
-  footerExtras?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  const isRetroLander = title === "Lunar Lander";
-  const [levelUpLevel, setLevelUpLevel] = useState<number | null>(null);
-  const lastLevelRef = useRef(stats.level);
-
-  useEffect(() => {
-    if (stats.level > lastLevelRef.current) {
-      setLevelUpLevel(stats.level);
-    }
-    lastLevelRef.current = stats.level;
-  }, [stats.level]);
-
-  useEffect(() => {
-    if (levelUpLevel === null) return;
-    const id = window.setTimeout(() => setLevelUpLevel(null), 2200);
-    return () => window.clearTimeout(id);
-  }, [levelUpLevel]);
-
-  return (
-    <section className={`relative overflow-visible sm:overflow-hidden rounded-2xl border p-2.5 sm:rounded-[2rem] sm:p-5 shadow-[0_24px_70px_rgba(2,8,23,0.35)] ${skin.frameClass}`}>
-      {!isRetroLander ? <div className="pointer-events-none absolute inset-0 px-game-grid opacity-30" /> : null}
-      {!isRetroLander ? <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${themeMeta[theme].frame}`} /> : null}
-      <div className="relative z-10 space-y-2.5 sm:space-y-4">
-        {!isRetroLander ? (
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)] sm:text-2xl">{title}</h2>
-            <p className="hidden text-xs uppercase tracking-[0.18em] text-white/80 sm:block">{themeMeta[theme].label}</p>
-          </div>
-        ) : null}
-
-        <div className={`grid gap-3 sm:gap-4 ${isRetroLander ? "xl:grid-cols-1" : "xl:grid-cols-[1fr_250px]"}`}>
-          <div className="flex items-center justify-center">
-            <div className={`relative border p-1 sm:p-2 shadow-[0_16px_34px_rgba(0,0,0,0.28)] ${isRetroLander ? "rounded-sm" : "rounded-[1rem] sm:rounded-[1.4rem]"} ${skin.surfaceClass}`}>
-              {children}
-            </div>
-          </div>
-
-          <aside className={`rounded-2xl border p-4 text-white ${skin.hudClass} ${isRetroLander ? "hidden" : "hidden xl:block"}`}>
-            <p className="text-xs uppercase tracking-[0.14em] text-white/80">Arcade Stats</p>
-            <div className="mt-3 space-y-2 text-sm">
-              <p>Score: <span className="font-semibold">{stats.score}</span></p>
-              <p>Level: <span className="font-semibold">{stats.level}</span></p>
-              <p>Lives: <span className="font-semibold">{stats.lives}</span></p>
-              <p>Best: <span className="font-semibold">{best}</span></p>
-              <p>Streak: <span className="font-semibold">{streak}</span></p>
-            </div>
-            <div className="mt-4 rounded-xl border border-cyan-300/30 bg-cyan-400/10 p-3 text-sm">
-              <p className="uppercase tracking-[0.1em] text-cyan-100/90">Rewards Earned</p>
-              <p className="mt-2">Coins: <span className="font-semibold text-amber-200">{rewardsEarned.coins}</span></p>
-              <p>Gems: <span className="font-semibold text-violet-200">{rewardsEarned.gems}</span></p>
-            </div>
-          </aside>
-        </div>
-
-        {stats.over ? (
-          <div className={`rounded-xl border p-3 text-sm text-white ${skin.hudClass}`}>
-            {stats.won ? "Victory" : "Game Over"} - Score {stats.score} - Best {best} - Streak {streak}
-          </div>
-        ) : null}
-
-        {!isRetroLander ? (
-        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-center sm:gap-3">
-            <button type="button" onClick={onRestart} className="px-button w-full sm:w-auto">Restart</button>
-            <button type="button" onClick={onExit} className="px-button-ghost w-full sm:w-auto">Exit</button>
-            <button type="button" onClick={onTutorial} className="px-button-ghost hidden w-full sm:w-auto sm:inline-flex">Tutorial</button>
-            <button type="button" onClick={onFullscreen} className="px-button-ghost hidden w-full sm:w-auto sm:inline-flex">Fullscreen</button>
-            <span className="col-span-2 rounded-lg border border-cyan-300/35 bg-cyan-400/10 px-3 py-2 text-center text-xs uppercase tracking-[0.12em] text-cyan-100 sm:col-span-1">
-              Theme: {themeMeta[theme].label}
-            </span>
-          </div>
-        ) : (
-          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-center sm:gap-3">
-            <button type="button" onClick={onRestart} className="px-button-ghost w-full sm:w-auto">Restart</button>
-            <button type="button" onClick={onExit} className="px-button-ghost w-full sm:w-auto">Exit</button>
-            <button type="button" onClick={onTutorial} className="px-button-ghost hidden w-full sm:w-auto sm:inline-flex">Tutorial</button>
-            <button type="button" onClick={onFullscreen} className="px-button-ghost hidden w-full sm:w-auto sm:inline-flex">Fullscreen</button>
-            {footerExtras}
-          </div>
-        )}
-      </div>
-
-      {levelUpLevel !== null ? (
-        <div className="absolute inset-0 z-20 grid place-items-center bg-[#020617]/78 backdrop-blur-[1px]">
-          <div className="relative w-full max-w-md overflow-hidden border-2 border-amber-300/75 bg-[#0a1550] p-5 text-center shadow-[0_0_0_2px_rgba(30,58,138,0.85),0_0_24px_rgba(251,191,36,0.24)]" style={{ fontFamily: '"Press Start 2P","VT323","Courier New",monospace' }}>
-            <div className="pointer-events-none absolute inset-0 opacity-45" style={{ backgroundImage: "repeating-linear-gradient(to bottom, rgba(255,255,255,0.06) 0, rgba(255,255,255,0.06) 1px, transparent 1px, transparent 4px)" }} />
-            <div className="pointer-events-none absolute inset-0 opacity-80">
-              {Array.from({ length: 44 }, (_, i) => (
-                <span
-                  key={i}
-                  className="absolute h-1.5 w-1.5 bg-amber-300/85"
-                  style={{ left: `${(i * 29) % 100}%`, top: `${(i * 17) % 100}%` }}
-                />
-              ))}
-            </div>
-            <p className="relative text-[11px] uppercase tracking-[0.18em] text-amber-200">CONGRATS</p>
-            <p className="relative mt-3 text-4xl font-black uppercase tracking-[0.08em] text-amber-300 [text-shadow:0_2px_0_rgba(120,53,15,0.95)]">LEVEL UP</p>
-            <p className="relative mt-2 text-[11px] leading-5 text-amber-100/95">YOU REACHED LEVEL {levelUpLevel}</p>
-            <div className="relative mt-3 text-2xl tracking-[0.2em] text-amber-300">* * * * *</div>
-            <div className="relative mt-5 flex justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setLevelUpLevel(null);
-                  onExit();
-                }}
-                className="border-2 border-amber-300/80 bg-[#1e3a8a] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-100 transition hover:bg-[#23439f]"
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                onClick={() => setLevelUpLevel(null)}
-                className="border-2 border-amber-300/85 bg-[#b45309] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-100 transition hover:bg-[#c46515]"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </section>
-  );
 }
 
 function SnakeGame({
@@ -2151,7 +1993,7 @@ export function PXPlayClient() {
   const [theme, setTheme] = useState<ArcadeTheme>("neon");
   const [landerSpeed, setLanderSpeed] = useState<1 | 2 | 3 | 4>(1);
   const [landerLoopMode, setLanderLoopMode] = useState(false);
-  const [persisted, setPersisted] = useState<Persisted>(() => readPersisted());
+  const [, setPersisted] = useState<Persisted>(() => readPersisted());
   const [tutorialSeen, setTutorialSeen] = useState<TutorialSeen>(() => readTutorialSeen());
   const [tutorialGame, setTutorialGame] = useState<GameId | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState<string | null>(null);
@@ -2159,14 +2001,6 @@ export function PXPlayClient() {
   const [rewardPopup, setRewardPopup] = useState<{ game: GameId; rewards: RewardResult; won: boolean; score: number } | null>(null);
   const [serverWallet, setServerWallet] = useState<{ coins: number; gems: { blue: number; purple: number; gold: number } } | null>(null);
   const gameFrameRef = useRef<HTMLDivElement>(null);
-  const [lastRewardByGame, setLastRewardByGame] = useState<Record<GameId, { coins: number; gems: number }>>({
-    snake: { coins: 0, gems: 0 },
-    lander: { coins: 0, gems: 0 },
-    xo: { coins: 0, gems: 0 },
-    pong: { coins: 0, gems: 0 },
-    breakout: { coins: 0, gems: 0 },
-    memory: { coins: 0, gems: 0 }
-  });
 
   useEffect(() => {
     const gameplayKeys = new Set([
@@ -2324,10 +2158,6 @@ export function PXPlayClient() {
         }
 
         saveInventory(nextInventory);
-        setLastRewardByGame((prevRewards) => ({
-          ...prevRewards,
-          [game]: { coins: rewards.coins, gems: rewards.gems.blue + rewards.gems.purple + rewards.gems.gold }
-        }));
         syncServerEarnings("games", rewards);
         setRewardPopup({ game, rewards, won, score });
         return nextInventory;
@@ -2505,39 +2335,6 @@ export function PXPlayClient() {
       document.body.classList.remove("px-play-game-active");
     };
   }, [activeGame]);
-
-  const skins: Record<GameId, GameSkin> = {
-    snake: {
-      frameClass: "border-lime-300/35 bg-gradient-to-b from-lime-700/35 via-lime-900/35 to-slate-950",
-      hudClass: "border-lime-300/35 bg-lime-400/10",
-      surfaceClass: "border-lime-300/40 bg-lime-950/35"
-    },
-    lander: {
-      frameClass: "border-slate-600/50 bg-black",
-      hudClass: "border-slate-500/40 bg-slate-900/30",
-      surfaceClass: "border-slate-600/55 bg-black"
-    },
-    xo: {
-      frameClass: "border-orange-300/35 bg-gradient-to-b from-amber-700/35 via-amber-900/45 to-amber-950",
-      hudClass: "border-amber-200/40 bg-amber-300/15",
-      surfaceClass: "border-amber-300/35 bg-amber-950/45"
-    },
-    pong: {
-      frameClass: "border-cyan-300/35 bg-gradient-to-b from-blue-700/35 via-blue-900/45 to-slate-950",
-      hudClass: "border-cyan-300/35 bg-cyan-400/10",
-      surfaceClass: "border-cyan-300/35 bg-slate-950/65"
-    },
-    breakout: {
-      frameClass: "border-fuchsia-300/35 bg-gradient-to-b from-fuchsia-700/30 via-indigo-900/40 to-slate-950",
-      hudClass: "border-fuchsia-300/35 bg-fuchsia-400/10",
-      surfaceClass: "border-fuchsia-300/35 bg-slate-950/65"
-    },
-    memory: {
-      frameClass: "border-sky-300/35 bg-gradient-to-b from-sky-700/30 via-cyan-900/40 to-slate-950",
-      hudClass: "border-sky-300/35 bg-sky-400/10",
-      surfaceClass: "border-sky-300/35 bg-slate-950/65"
-    }
-  };
 
   const cosmetics: Array<{ id: string; label: string; type: string; cost: number; equipKey: keyof ArcadeInventory["equipped"]; equipValue: string }> = [
     { id: "snake-ember", label: "Snake Ember Skin", type: "Snake", cost: 120, equipKey: "snake", equipValue: "ember" },

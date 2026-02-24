@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { HistoryClient } from "@/components/HistoryClient";
-import { getUserPlanTierForClient } from "@/lib/planAccess";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireProAccess } from "@/lib/subscriptionLifecycle";
 import { SessionSummary } from "@/lib/types";
@@ -21,7 +20,6 @@ export default async function HistoryPage() {
   }
 
   await requireProAccess(supabase, user.id, "/pricing?plan=pro");
-  const planTier = await getUserPlanTierForClient(supabase, user.id, user.email);
 
   const primarySessionQuery = await supabase
     .from("sessions")
