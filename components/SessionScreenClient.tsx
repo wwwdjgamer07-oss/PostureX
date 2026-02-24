@@ -323,8 +323,8 @@ export function SessionScreenClient() {
         </p>
       </header>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
-        <div className="space-y-4 px-reveal" style={{ animationDelay: "120ms" }}>
+      <div className="space-y-4">
+        <section className="space-y-4 px-reveal" style={{ animationDelay: "120ms" }}>
           {resolvedSource === "camera" ? (
             <CameraSession
               onMetrics={(next) => {
@@ -368,9 +368,9 @@ export function SessionScreenClient() {
               onPermissionChange={setPermissionStatus}
             />
           )}
-        </div>
+        </section>
 
-        <aside className="space-y-4">
+        <section className="space-y-4">
           <CoachAvatarBubble message={coachMessage} />
 
           <article className="px-panel px-reveal px-hover-lift p-5" style={{ animationDelay: "220ms" }}>
@@ -424,7 +424,7 @@ export function SessionScreenClient() {
           </article>
 
           <FatigueIndicatorBar fatigue={fatigue} />
-        </aside>
+        </section>
       </div>
     </div>
   );
