@@ -9,9 +9,17 @@
       <stop offset="1" stop-color="#3B82F6" />
     </linearGradient>
     <linearGradient id="text" x1="64" y1="78" x2="192" y2="178" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#A5F3FC" />
-      <stop offset="1" stop-color="#38BDF8" />
+      <stop stop-color="#67E8F9" />
+      <stop offset="0.55" stop-color="#22D3EE" />
+      <stop offset="1" stop-color="#00E5FF" />
     </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4.5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
   </defs>
   <rect width="256" height="256" rx="54" fill="url(#bg)" />
   <rect x="14" y="14" width="228" height="228" rx="42" stroke="url(#stroke)" stroke-width="6" />
@@ -23,7 +31,22 @@
     font-family="Segoe UI, Arial, sans-serif"
     font-weight="900"
     letter-spacing="-4"
+    fill="#22D3EE"
+    opacity="0.35"
+    filter="url(#glow)"
+  >
+    PX
+  </text>
+  <text
+    x="128"
+    y="156"
+    text-anchor="middle"
+    font-size="96"
+    font-family="Segoe UI, Arial, sans-serif"
+    font-weight="900"
+    letter-spacing="-4"
     fill="url(#text)"
+    filter="url(#glow)"
   >
     PX
   </text>
