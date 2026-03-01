@@ -9,7 +9,9 @@ export function MemoryGame({ onExit }: { onExit: () => void }) {
   type Card = { id: number; value: string; open: boolean; matched: boolean };
 
   const buildCards = useCallback((): Card[] => {
-    return [...MEMORY_SYMBOLS, ...MEMORY_SYMBOLS].sort(() => Math.random() - 0.5).map((value, id) => ({ id, value, open: false, matched: false }));
+    return [...MEMORY_SYMBOLS, ...MEMORY_SYMBOLS]
+      .sort(() => Math.random() - 0.5)
+      .map((value, id) => ({ id, value, open: false, matched: false }));
   }, []);
 
   const [cards, setCards] = useState<Card[]>(() => buildCards());
@@ -61,13 +63,30 @@ export function MemoryGame({ onExit }: { onExit: () => void }) {
       footer={
         <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <p className="flex-1 text-sm text-cyan-100">Moves: {moves} {won ? "· Complete" : ""}</p>
+            <p className="flex-1 text-sm text-cyan-100">Moves: {moves} {won ? "- Complete" : ""}</p>
             <button type="button" onClick={restart} className={TOUCH_ACTION_BTN}>Restart</button>
           </div>
         </div>
       }
     >
-      <div className="grid h-full place-items-center bg-[#020617] p-4"><div className="grid w-full max-w-[520px] grid-cols-4 gap-3">{cards.map((card, idx) => (<button key={card.id} type="button" onClick={() => flip(idx)} className={`aspect-square rounded-xl border text-lg font-semibold transition ${card.open || card.matched ? "border-cyan-300/60 bg-cyan-400/15 text-cyan-100" : "border-slate-500/30 bg-slate-900/70 text-slate-300"}`}>{card.open || card.matched ? card.value : "?"}</button>))}</div></div>
+      <div className="grid h-full w-full place-items-center bg-[#020617] p-4">
+        <div className="grid w-full max-w-[520px] grid-cols-4 gap-3">
+          {cards.map((card, idx) => (
+            <button
+              key={card.id}
+              type="button"
+              onClick={() => flip(idx)}
+              className={`aspect-square rounded-xl border text-lg font-semibold transition ${
+                card.open || card.matched
+                  ? "border-cyan-300/60 bg-cyan-400/15 text-cyan-100"
+                  : "border-slate-500/30 bg-slate-900/70 text-slate-300"
+              }`}
+            >
+              {card.open || card.matched ? card.value : "?"}
+            </button>
+          ))}
+        </div>
+      </div>
     </GameShell>
   );
 }

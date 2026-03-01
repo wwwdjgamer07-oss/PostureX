@@ -39,9 +39,9 @@ function createMessage(role: "user" | "assistant", content: string): PostureAIMe
   };
 }
 
-function isMicBlockedMessage(message: string | null) {
+function isMicPermissionDeniedMessage(message: string | null) {
   if (!message) return false;
-  return /microphone|permission|blocked|denied/i.test(message);
+  return /permission blocked|permission denied|not-allowed|service-not-allowed/i.test(message);
 }
 
 export function AIChatPanel({
@@ -195,14 +195,60 @@ export function AIChatPanel({
     try {
       const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
       setMicPermissionState(status.state);
+      if (status.state !== "denied") {
+        setMicError((prev) => (isMicPermissionDeniedMessage(prev) ? null : prev));
+      }
     } catch {
       setMicPermissionState("unknown");
     }
   }, []);
 
+  const requestMic = useCallback(async () => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setMicError("Microphone is not available in this browser.");
+      setMicPermissionState("unknown");
+      return { granted: false, blocked: false };
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      setMicError(null);
+      setMicPermissionState("granted");
+      return { granted: true, blocked: false };
+    } catch (errorValue) {
+      const name = errorValue instanceof DOMException ? errorValue.name : "";
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        setMicError("Microphone permission blocked. Enable in browser settings.");
+        setMicPermissionState("denied");
+        return { granted: false, blocked: true };
+      }
+      if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+        setMicError("No microphone found. Connect a microphone and try again.");
+        return { granted: false, blocked: false };
+      }
+      setMicError("Voice input failed. Please try again.");
+      return { granted: false, blocked: false };
+    }
+  }, []);
+
   useEffect(() => {
     if (mode === "floating" && !isOpen) return;
-    void syncMicPermissionState();
+
+    const refreshPermission = () => {
+      void syncMicPermissionState();
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") refreshPermission();
+    };
+
+    refreshPermission();
+    window.addEventListener("focus", refreshPermission);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("focus", refreshPermission);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, [isOpen, mode, syncMicPermissionState]);
 
   const speakText = (text: string, emotionTone: string) => {
@@ -283,13 +329,21 @@ export function AIChatPanel({
     }, 380);
   };
 
-  const isMicDenied = micPermissionState === "denied" || isMicBlockedMessage(micError);
+  const isMicDenied =
+    micPermissionState === "denied" ||
+    (micPermissionState !== "granted" && isMicPermissionDeniedMessage(micError));
   const micStatusText = isMicDenied ? "Microphone blocked" : micError ?? "";
-  const handleMicFix = () => {
+  const handleMicFix = async () => {
     if (typeof window === "undefined") return;
-    window.alert(
-      "Microphone is blocked.\n1) Click the lock icon in the address bar.\n2) Open Site settings.\n3) Set Microphone to Allow.\n4) Reload this page."
-    );
+    const result = await requestMic();
+    await syncMicPermissionState();
+    if (result.granted) return;
+
+    if (result.blocked) {
+      window.alert(
+        "Microphone is blocked.\n1) Click the lock icon in the address bar.\n2) Open Site settings.\n3) Set Microphone to Allow.\n4) Reload this page."
+      );
+    }
   };
 
   return (

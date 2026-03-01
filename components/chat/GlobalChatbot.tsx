@@ -93,18 +93,24 @@ function compactMicError(message: string) {
   return clean.length > 140 ? `${clean.slice(0, 140)}...` : clean;
 }
 
-function isMicBlockedMessage(message: string | null) {
+function isMicPermissionDeniedMessage(message: string | null) {
   if (!message) return false;
-  return /microphone|permission|blocked|denied/i.test(message);
+  return /permission blocked|permission denied|not-allowed|service-not-allowed/i.test(message);
 }
 
-export function GlobalChatbot() {
+interface GlobalChatbotProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  showTrigger?: boolean;
+}
+
+export function GlobalChatbot({ open, onOpenChange, showTrigger = true }: GlobalChatbotProps = {}) {
   const isObsidianSkull = useIsObsidianSkullTheme();
   const router = useRouter();
   const pathname = usePathname() || "/";
   const pageType = pageTypeFromPath(pathname);
   const [userId, setUserId] = useState<string | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [messages, setMessages] = useState<PostureAIMessage[]>([]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
@@ -126,6 +132,22 @@ export function GlobalChatbot() {
 
   const storageBase = useMemo(() => `posturex.ai.global.${userId ?? "guest"}`, [userId]);
   const storageKey = `${storageBase}.messages`;
+  const isControlled = typeof open === "boolean";
+  const isOpen = isControlled ? Boolean(open) : internalOpen;
+  const isOpenRef = useRef(isOpen);
+
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
+
+  const setIsOpen = useCallback((next: boolean | ((prev: boolean) => boolean)) => {
+    const resolved = typeof next === "function" ? (next as (prev: boolean) => boolean)(isOpenRef.current) : next;
+    isOpenRef.current = resolved;
+    if (!isControlled) {
+      setInternalOpen(resolved);
+    }
+    onOpenChange?.(resolved);
+  }, [isControlled, onOpenChange]);
 
   const syncMicPermissionState = useCallback(async () => {
     if (typeof window === "undefined" || typeof navigator === "undefined" || !("permissions" in navigator)) {
@@ -135,8 +157,40 @@ export function GlobalChatbot() {
     try {
       const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
       setMicPermissionState(status.state);
+      if (status.state !== "denied") {
+        setMicError((prev) => (isMicPermissionDeniedMessage(prev) ? null : prev));
+      }
     } catch {
       setMicPermissionState("unknown");
+    }
+  }, []);
+
+  const requestMic = useCallback(async () => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setMicError("Microphone is not available in this browser.");
+      setMicPermissionState("unknown");
+      return { granted: false, blocked: false };
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      setMicError(null);
+      setMicPermissionState("granted");
+      return { granted: true, blocked: false };
+    } catch (errorValue) {
+      const name = errorValue instanceof DOMException ? errorValue.name : "";
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        setMicError("Microphone permission blocked. Enable in browser settings.");
+        setMicPermissionState("denied");
+        return { granted: false, blocked: true };
+      }
+      if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+        setMicError("No microphone found. Connect a microphone and try again.");
+        return { granted: false, blocked: false };
+      }
+      setMicError("Voice input failed. Please try again.");
+      return { granted: false, blocked: false };
     }
   }, []);
 
@@ -163,6 +217,7 @@ export function GlobalChatbot() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (isControlled) return;
     const savedOpen = window.localStorage.getItem(`${storageBase}.open`);
     if (savedOpen === "1") setIsOpen(true);
 
@@ -174,7 +229,7 @@ export function GlobalChatbot() {
     } catch {
       // no-op
     }
-  }, [storageBase]);
+  }, [isControlled, setIsOpen, storageBase]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -322,7 +377,7 @@ export function GlobalChatbot() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isOpen]);
+  }, [isOpen, setIsOpen]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -345,7 +400,22 @@ export function GlobalChatbot() {
 
   useEffect(() => {
     if (!isOpen) return;
-    void syncMicPermissionState();
+
+    const refreshPermission = () => {
+      void syncMicPermissionState();
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") refreshPermission();
+    };
+
+    refreshPermission();
+    window.addEventListener("focus", refreshPermission);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("focus", refreshPermission);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, [isOpen, syncMicPermissionState]);
 
   useEffect(() => {
@@ -367,7 +437,7 @@ export function GlobalChatbot() {
     syncFromDom();
     window.addEventListener("posturex-game-active", onGameState as EventListener);
     return () => window.removeEventListener("posturex-game-active", onGameState as EventListener);
-  }, []);
+  }, [setIsOpen]);
 
   const speakText = (text: string, emotionTone: string, force = false) => {
     if (!voiceEnabled || typeof window === "undefined" || !("speechSynthesis" in window)) return;
@@ -616,48 +686,56 @@ export function GlobalChatbot() {
 
   const tooltipText = "PostureX AI";
   const personalizedLabel = memory?.user_name ? `PostureX AI - ${memory.user_name}` : "PostureX AI";
-  const isMicDenied = micPermissionState === "denied" || isMicBlockedMessage(micError);
+  const isMicDenied =
+    micPermissionState === "denied" ||
+    (micPermissionState !== "granted" && isMicPermissionDeniedMessage(micError));
   const micStatusText = isMicDenied ? "Microphone blocked" : micError ? compactMicError(micError) : "";
   const chatVisible = isOpen && !gameActive;
 
-  const handleMicFix = () => {
+  const handleMicFix = async () => {
     if (typeof window === "undefined") return;
-    window.alert(
-      "Microphone is blocked.\n1) Click the lock icon in the address bar.\n2) Open Site settings.\n3) Set Microphone to Allow.\n4) Reload this page."
-    );
+    const result = await requestMic();
+    await syncMicPermissionState();
+    if (result.granted) return;
+
+    if (result.blocked) {
+      window.alert(
+        "Microphone is blocked.\n1) Click the lock icon in the address bar.\n2) Open Site settings.\n3) Set Microphone to Allow.\n4) Reload this page."
+      );
+    }
   };
 
   return (
     <>
-      <div className={cn("px-global-chat-trigger-wrap z-[70] transition-all duration-200", gameActive ? "pointer-events-none translate-y-3 opacity-0" : "")}>
-        <div className="group relative">
-          <button
-            type="button"
-            onClick={() => {
-              if (gameActive) return;
-              setIsOpen((prev) => !prev);
-            }}
-            className="px-global-chat-trigger px-ai-fab floating-ai-btn relative grid h-14 w-14 place-items-center rounded-full border border-cyan-300/50 bg-slate-900/75 text-cyan-100 shadow-[0_0_30px_rgba(34,211,238,0.28)] backdrop-blur-xl transition duration-300 hover:scale-[1.03] hover:shadow-[0_0_40px_rgba(34,211,238,0.34)] focus:outline-none focus:ring-2 focus:ring-cyan-300/55"
-            aria-label={personalizedLabel}
-          >
-            <span className="absolute inset-0 rounded-full border border-cyan-300/35 animate-pulse" />
-            <span className="absolute inset-1 rounded-full bg-gradient-to-br from-cyan-300/20 to-blue-500/10" />
-            {isObsidianSkull ? <SkullBrainIcon className="relative h-5 w-5" /> : <Sparkles className="relative h-5 w-5" />}
-          </button>
-          <span className="pointer-events-none absolute -top-10 right-0 rounded-lg border border-slate-500/35 bg-slate-900/85 px-2 py-1 text-xs text-cyan-100 opacity-0 backdrop-blur transition group-hover:opacity-100">
-            {tooltipText}
-          </span>
+      {showTrigger && !chatVisible ? (
+        <div className={cn("px-global-chat-trigger-wrap z-[70] transition-all duration-200", gameActive ? "pointer-events-none translate-y-3 opacity-0" : "")}>
+          <div className="group relative">
+            <button
+              type="button"
+              onClick={() => {
+                if (gameActive) return;
+                setIsOpen((prev) => !prev);
+              }}
+              className="px-global-chat-trigger px-ai-fab floating-ai-btn relative grid h-14 w-14 place-items-center rounded-full border border-cyan-300/50 bg-slate-900/75 text-cyan-100 shadow-[0_0_30px_rgba(34,211,238,0.28)] backdrop-blur-xl transition duration-300 hover:scale-[1.03] hover:shadow-[0_0_40px_rgba(34,211,238,0.34)] focus:outline-none focus:ring-2 focus:ring-cyan-300/55"
+              aria-label={personalizedLabel}
+            >
+              <span className="absolute inset-0 rounded-full border border-cyan-300/35 animate-pulse" />
+              <span className="absolute inset-1 rounded-full bg-gradient-to-br from-cyan-300/20 to-blue-500/10" />
+              {isObsidianSkull ? <SkullBrainIcon className="relative h-5 w-5" /> : <Sparkles className="relative h-5 w-5" />}
+            </button>
+            <span className="pointer-events-none absolute -top-10 right-0 rounded-lg border border-slate-500/35 bg-slate-900/85 px-2 py-1 text-xs text-cyan-100 opacity-0 backdrop-blur transition group-hover:opacity-100">
+              {tooltipText}
+            </span>
+          </div>
         </div>
-      </div>
+      ) : null}
 
-      <aside
-        className={cn(
-          "px-global-chat-wrap fixed inset-x-3 top-[calc(env(safe-area-inset-top)+5rem)] bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-[68] flex w-auto origin-bottom-right transition-all duration-300 sm:inset-x-auto sm:right-6 sm:top-20 sm:bottom-auto sm:h-[min(78vh,740px)] sm:w-[min(92vw,390px)]",
-          chatVisible ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-6 scale-95 opacity-0"
-        )}
-        aria-hidden={!chatVisible}
-      >
-        <div className="px-global-chat-panel chat-panel relative flex h-full w-full flex-col overflow-hidden rounded-3xl border border-cyan-300/35 bg-gradient-to-b from-slate-900/90 via-slate-900/80 to-blue-950/70 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_24px_80px_rgba(2,6,23,0.65)] backdrop-blur-2xl">
+      {chatVisible ? (
+        <aside
+          className="px-global-chat-wrap fixed inset-x-3 top-[calc(env(safe-area-inset-top)+5rem)] bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-[68] flex w-auto origin-bottom-right transition-all duration-300 sm:inset-x-auto sm:right-6 sm:top-20 sm:bottom-auto sm:h-[min(78vh,740px)] sm:w-[min(92vw,390px)]"
+          aria-hidden={false}
+        >
+          <div className="px-global-chat-panel chat-panel relative flex h-full w-full flex-col overflow-hidden rounded-3xl border border-cyan-300/35 bg-gradient-to-b from-slate-900/90 via-slate-900/80 to-blue-950/70 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_24px_80px_rgba(2,6,23,0.65)] backdrop-blur-2xl">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(34,211,238,0.2),transparent_44%),radial-gradient(circle_at_92%_0%,rgba(59,130,246,0.14),transparent_36%)]" />
 
           <header className="relative z-10 border-b border-cyan-200/15 px-4 py-3">
@@ -795,8 +873,9 @@ export function GlobalChatbot() {
               </div>
             ) : null}
           </div>
-        </div>
-      </aside>
+          </div>
+        </aside>
+      ) : null}
     </>
   );
 }
