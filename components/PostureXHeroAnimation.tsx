@@ -4,7 +4,6 @@ import Link from "next/link";
 import { motion, useMotionValue, useSpring } from "framer-motion";
 import { Activity, Camera, ChevronRight, Sparkles } from "lucide-react";
 import { useMemo } from "react";
-import { StartFreeButton } from "@/components/StartFreeButton";
 
 function FloatingCard({
   title,
@@ -117,18 +116,18 @@ export function PostureXHeroAnimation() {
             </p>
             <h1 className="mt-5 text-3xl font-semibold leading-[1.05] text-slate-900 dark:text-white sm:text-5xl">
               Engineered posture intelligence
-              <br className="hidden sm:block" /> for extreme people
+              <br className="hidden sm:block" /> for focused professionals
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-sm text-slate-600 dark:text-slate-300 sm:text-base">
               Live tracking, fatigue warnings, and coaching insights in one streamlined performance cockpit.
             </p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
               <Link href="/dashboard" className="px-hero-cta-secondary rounded-xl border border-slate-300/70 bg-white/72 px-5 py-3 text-sm font-semibold text-slate-800 dark:border-white/25 dark:bg-white/5 dark:text-white">
-                Main Menu
+                Dashboard
               </Link>
-              <StartFreeButton className="px-hero-cta-primary inline-flex items-center gap-2 rounded-xl border border-cyan-400/50 bg-cyan-400/18 px-5 py-3 text-sm font-semibold text-slate-900 shadow-[0_0_28px_rgba(34,211,238,0.22)] dark:border-cyan-200/40 dark:bg-cyan-400/20 dark:text-white dark:shadow-[0_0_28px_rgba(34,211,238,0.3)] disabled:opacity-60">
+              <Link href="/pricing" className="px-hero-cta-primary inline-flex items-center gap-2 rounded-xl border border-cyan-400/50 bg-cyan-400/18 px-5 py-3 text-sm font-semibold text-slate-900 shadow-[0_0_28px_rgba(34,211,238,0.22)] dark:border-cyan-200/40 dark:bg-cyan-400/20 dark:text-white dark:shadow-[0_0_28px_rgba(34,211,238,0.3)]">
                 View Plans <ChevronRight className="h-4 w-4" />
-              </StartFreeButton>
+              </Link>
             </div>
           </motion.div>
 

@@ -263,13 +263,15 @@ export function AIChatPanel({
           llm_model?: string | null;
         };
         const aiReply = data.message ?? createMessage("assistant", "Gemini did not return a response.");
-        setMessages((prev) => [...prev, aiReply]);
+        const fullText = typeof aiReply.content === "string" ? aiReply.content : String(aiReply.content ?? "");
+        const normalizedReply = { ...aiReply, content: fullText };
+        setMessages((prev) => [...prev, normalizedReply]);
         setMessageModel((prev) => ({
           ...prev,
-          [aiReply.id]: data.llm_model ? `Gemini • ${data.llm_model}` : "Gemini"
+          [aiReply.id]: data.llm_model ? `Gemini - ${data.llm_model}` : "Gemini"
         }));
         if (data.emotion?.primary) setEmotion(data.emotion.primary);
-        speakText(aiReply.content, data.emotion?.tone ?? "neutral");
+        speakText(fullText, data.emotion?.tone ?? "neutral");
       } catch (errorValue) {
         const detail = errorValue instanceof Error ? errorValue.message : "unknown_error";
         const failure = createMessage("assistant", `Gemini is unavailable right now. Please try again. (${detail})`);
@@ -285,7 +287,9 @@ export function AIChatPanel({
   const micStatusText = isMicDenied ? "Microphone blocked" : micError ?? "";
   const handleMicFix = () => {
     if (typeof window === "undefined") return;
-    window.alert("Enable microphone in browser: Site Settings -> Microphone -> Allow.");
+    window.alert(
+      "Microphone is blocked.\n1) Click the lock icon in the address bar.\n2) Open Site settings.\n3) Set Microphone to Allow.\n4) Reload this page."
+    );
   };
 
   return (

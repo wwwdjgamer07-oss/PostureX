@@ -117,6 +117,7 @@ export function GlobalChatbot() {
   const [metrics, setMetrics] = useState<PostureAIMetrics>(DEFAULT_METRICS);
   const [memory, setMemory] = useState<UserMemoryRecord | null>(null);
   const [controlEnabled, setControlEnabled] = useState(true);
+  const [gameActive, setGameActive] = useState(false);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
   const lastSpokenMessageRef = useRef<string | null>(null);
@@ -347,6 +348,27 @@ export function GlobalChatbot() {
     void syncMicPermissionState();
   }, [isOpen, syncMicPermissionState]);
 
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof document === "undefined") return;
+
+    const syncFromDom = () => {
+      const active = document.body.classList.contains("px-game-active") || document.documentElement.classList.contains("px-game-active");
+      setGameActive(active);
+      if (active) setIsOpen(false);
+    };
+
+    const onGameState = (event: Event) => {
+      const custom = event as CustomEvent<{ active?: boolean }>;
+      const active = Boolean(custom.detail?.active);
+      setGameActive(active);
+      if (active) setIsOpen(false);
+    };
+
+    syncFromDom();
+    window.addEventListener("posturex-game-active", onGameState as EventListener);
+    return () => window.removeEventListener("posturex-game-active", onGameState as EventListener);
+  }, []);
+
   const speakText = (text: string, emotionTone: string, force = false) => {
     if (!voiceEnabled || typeof window === "undefined" || !("speechSynthesis" in window)) return;
     if (!force && lastSpokenMessageRef.current === text) return;
@@ -565,7 +587,9 @@ export function GlobalChatbot() {
           console.info("[GlobalChatbot] LLM provider:", data.llm_provider ?? "unknown", "reason:", data.llm_reason ?? "ok");
         }
         const aiReply = data.message ?? createMessage("assistant", "I am here with you. Want a quick posture reset?");
-        setMessages((prev) => [...prev, aiReply]);
+        const fullText = typeof aiReply.content === "string" ? aiReply.content : String(aiReply.content ?? "");
+        const normalizedReply = { ...aiReply, content: fullText };
+        setMessages((prev) => [...prev, normalizedReply]);
         setMessageTone((prev) => ({ ...prev, [aiReply.id]: data.emotion?.tone ?? "neutral" }));
         setMessageProvider((prev) => ({
           ...prev,
@@ -576,7 +600,7 @@ export function GlobalChatbot() {
           [aiReply.id]: data.llm_model || "gemini"
         }));
         if (data.memory) setMemory(data.memory);
-        speakText(aiReply.content, data.emotion?.tone ?? "neutral");
+        speakText(fullText, data.emotion?.tone ?? "neutral");
       } catch (errorValue) {
         const detail = errorValue instanceof Error ? errorValue.message : "unknown_error";
         const failure = createMessage("assistant", `Gemini is unavailable right now. Please try again. (${detail})`);
@@ -594,19 +618,25 @@ export function GlobalChatbot() {
   const personalizedLabel = memory?.user_name ? `PostureX AI - ${memory.user_name}` : "PostureX AI";
   const isMicDenied = micPermissionState === "denied" || isMicBlockedMessage(micError);
   const micStatusText = isMicDenied ? "Microphone blocked" : micError ? compactMicError(micError) : "";
+  const chatVisible = isOpen && !gameActive;
 
   const handleMicFix = () => {
     if (typeof window === "undefined") return;
-    window.alert("Enable microphone in browser: Site Settings -> Microphone -> Allow.");
+    window.alert(
+      "Microphone is blocked.\n1) Click the lock icon in the address bar.\n2) Open Site settings.\n3) Set Microphone to Allow.\n4) Reload this page."
+    );
   };
 
   return (
     <>
-      <div className="px-global-chat-trigger-wrap z-[70]">
+      <div className={cn("px-global-chat-trigger-wrap z-[70] transition-all duration-200", gameActive ? "pointer-events-none translate-y-3 opacity-0" : "")}>
         <div className="group relative">
           <button
             type="button"
-            onClick={() => setIsOpen((prev) => !prev)}
+            onClick={() => {
+              if (gameActive) return;
+              setIsOpen((prev) => !prev);
+            }}
             className="px-global-chat-trigger px-ai-fab floating-ai-btn relative grid h-14 w-14 place-items-center rounded-full border border-cyan-300/50 bg-slate-900/75 text-cyan-100 shadow-[0_0_30px_rgba(34,211,238,0.28)] backdrop-blur-xl transition duration-300 hover:scale-[1.03] hover:shadow-[0_0_40px_rgba(34,211,238,0.34)] focus:outline-none focus:ring-2 focus:ring-cyan-300/55"
             aria-label={personalizedLabel}
           >
@@ -623,9 +653,9 @@ export function GlobalChatbot() {
       <aside
         className={cn(
           "px-global-chat-wrap fixed inset-x-3 top-[calc(env(safe-area-inset-top)+5rem)] bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-[68] flex w-auto origin-bottom-right transition-all duration-300 sm:inset-x-auto sm:right-6 sm:top-20 sm:bottom-auto sm:h-[min(78vh,740px)] sm:w-[min(92vw,390px)]",
-          isOpen ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-6 scale-95 opacity-0"
+          chatVisible ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-6 scale-95 opacity-0"
         )}
-        aria-hidden={!isOpen}
+        aria-hidden={!chatVisible}
       >
         <div className="px-global-chat-panel chat-panel relative flex h-full w-full flex-col overflow-hidden rounded-3xl border border-cyan-300/35 bg-gradient-to-b from-slate-900/90 via-slate-900/80 to-blue-950/70 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_24px_80px_rgba(2,6,23,0.65)] backdrop-blur-2xl">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(34,211,238,0.2),transparent_44%),radial-gradient(circle_at_92%_0%,rgba(59,130,246,0.14),transparent_36%)]" />
@@ -677,7 +707,7 @@ export function GlobalChatbot() {
                 <div key={message.id} className={cn("px-chat-message flex w-full animate-fade-slide", isUser ? "justify-end" : "justify-start")}>
                   <div
                     className={cn(
-                      "px-chat-bubble chat-bubble px-ai-message max-w-[88%] rounded-2xl border px-3 py-2 text-sm",
+                      "px-chat-bubble chat-bubble px-ai-message rounded-2xl border px-3 py-2 text-sm",
                       isUser
                         ? "px-chat-bubble-user border-slate-500/30 bg-slate-900/75 text-slate-100"
                         : "px-chat-bubble-ai border-cyan-300/35 bg-cyan-400/10 text-cyan-50 shadow-[0_0_20px_rgba(34,211,238,0.14)]"
@@ -698,7 +728,7 @@ export function GlobalChatbot() {
                     {!isUser ? (
                       <p className="mt-1 text-[10px] uppercase tracking-[0.08em] text-cyan-200/70">
                         {messageProvider[message.id] === "gemini"
-                          ? `Gemini • ${messageModel[message.id] ?? "mode-unknown"}`
+                          ? `Gemini - ${messageModel[message.id] ?? "mode-unknown"}`
                           : "System"}
                       </p>
                     ) : null}

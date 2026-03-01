@@ -9,7 +9,7 @@ interface AIButtonProps {
 
 export function AIButton({ onClick }: AIButtonProps) {
   return (
-    <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] right-3 z-40 group sm:right-6">
+    <div className="floating-ai fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] right-3 z-20 group sm:right-6">
       <button
         type="button"
         onClick={onClick}

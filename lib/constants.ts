@@ -1,9 +1,10 @@
 import { PlanTier } from "./types";
+import { PLAN_PRICES_INR } from "@/lib/pricing";
 
 export const PLAN_PRICES: Record<PlanTier, { monthlyInr: number }> = {
-  FREE: { monthlyInr: 0 },
-  BASIC: { monthlyInr: 1 },
-  PRO: { monthlyInr: 2 }
+  FREE: { monthlyInr: PLAN_PRICES_INR.FREE },
+  BASIC: { monthlyInr: PLAN_PRICES_INR.BASIC },
+  PRO: { monthlyInr: PLAN_PRICES_INR.PRO }
 };
 
 export const PLAN_FEATURES: Record<PlanTier, string[]> = {

@@ -7,8 +7,13 @@ import { toast } from "sonner";
 import { PLAN_FEATURES } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
 import type { PlanTier } from "@/lib/types";
-
-type PaidPlan = "BASIC" | "PRO" | "PRO_WEEKLY";
+import {
+  BASIC_TO_PRO_UPGRADE_INR,
+  PAID_PLAN_PRICES_INR,
+  formatInr,
+  resolveExpectedAmountInr,
+  type PaidPlan
+} from "@/lib/pricing";
 
 interface PricingIndiaClientProps {
   currentPlan: PlanTier;
@@ -41,7 +46,7 @@ const plans: Array<{
     id: "BASIC",
     tier: "BASIC",
     label: "Basic",
-    priceText: "\u20b91 / month",
+    priceText: `₹${formatInr(PAID_PLAN_PRICES_INR.BASIC)} / month`,
     paidPlan: "BASIC",
     description: "For consistent personal posture improvement."
   },
@@ -49,7 +54,7 @@ const plans: Array<{
     id: "PRO",
     tier: "PRO",
     label: "Pro",
-    priceText: "\u20b92 / month",
+    priceText: `₹${formatInr(PAID_PLAN_PRICES_INR.PRO)} / month`,
     paidPlan: "PRO",
     description: "For advanced AI analytics and team-level workflows.",
     rewardText: "Bonus: 80 PX Coins + 1 Purple Gem",
@@ -59,17 +64,17 @@ const plans: Array<{
     id: "PRO_WEEKLY",
     tier: "PRO",
     label: "Pro Weekly",
-    priceText: "\u20b91 / week",
+    priceText: `₹${formatInr(PAID_PLAN_PRICES_INR.PRO_WEEKLY)} / week`,
     paidPlan: "PRO_WEEKLY",
     description: "Weekly Pro membership for short bursts and flexible usage.",
     rewardText: "Bonus: 20 PX Coins + 1 Blue Gem"
   }
 ];
 
-const paidPlanMeta: Record<PaidPlan, { amount: 1 | 2; label: string; intervalLabel: string }> = {
-  BASIC: { amount: 1, label: "Basic", intervalLabel: "monthly" },
-  PRO: { amount: 2, label: "Pro", intervalLabel: "monthly" },
-  PRO_WEEKLY: { amount: 1, label: "Pro Weekly", intervalLabel: "weekly" },
+const paidPlanMeta: Record<PaidPlan, { amount: number; label: string; intervalLabel: string }> = {
+  BASIC: { amount: PAID_PLAN_PRICES_INR.BASIC, label: "Basic", intervalLabel: "monthly" },
+  PRO: { amount: PAID_PLAN_PRICES_INR.PRO, label: "Pro", intervalLabel: "monthly" },
+  PRO_WEEKLY: { amount: PAID_PLAN_PRICES_INR.PRO_WEEKLY, label: "Pro Weekly", intervalLabel: "weekly" }
 };
 
 const queryPlanMap: Record<string, PaidPlan> = {
@@ -323,7 +328,7 @@ export function PricingIndiaClient({ currentPlan, userId }: PricingIndiaClientPr
     setSelectedPlan(plan);
 
     try {
-      const amount = allowBasicToProUpgrade ? 1 : paidPlanMeta[plan].amount;
+      const amount = resolveExpectedAmountInr(plan, allowBasicToProUpgrade);
       const orderResponse = await fetch("/api/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -459,7 +464,7 @@ export function PricingIndiaClient({ currentPlan, userId }: PricingIndiaClientPr
                     ) : isCurrent && isActiveMember ? (
                       "Plan Active"
                     ) : allowBasicToProUpgrade ? (
-                      "Upgrade to Pro - \u20b91"
+                      `Upgrade to Pro - ₹${formatInr(BASIC_TO_PRO_UPGRADE_INR)}`
                     ) : isCurrent ? (
                       "Current Plan"
                     ) : (

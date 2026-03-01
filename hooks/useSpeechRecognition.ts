@@ -67,6 +67,7 @@ export function useSpeechRecognition() {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const restartTimerRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<number | null>(null);
+  const micReadyRef = useRef(false);
   const shouldRestartRef = useRef(false);
   const manualStopRef = useRef(false);
   const silenceStopRef = useRef(false);
@@ -106,6 +107,31 @@ export function useSpeechRecognition() {
     recognitionRef.current?.stop();
   }, [clearTimers]);
 
+  const requestMic = useCallback(async () => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setError("Microphone is not available in this browser.");
+      return false;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      return true;
+    } catch (errorValue) {
+      const name = errorValue instanceof DOMException ? errorValue.name : "";
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        setError("Microphone permission blocked. Enable in browser settings.");
+        return false;
+      }
+      if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+        setError("No microphone found. Connect a microphone and try again.");
+        return false;
+      }
+      setError("Voice input failed. Please try again.");
+      return false;
+    }
+  }, []);
+
   const startListening = useCallback(async () => {
     if (typeof window === "undefined") return;
     const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -117,6 +143,24 @@ export function useSpeechRecognition() {
     if (!window.isSecureContext) {
       setError("Voice input requires HTTPS.");
       return;
+    }
+
+    if ("permissions" in navigator) {
+      try {
+        const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
+        if (status.state === "denied") {
+          setError("Microphone permission blocked. Enable in browser settings.");
+          return;
+        }
+      } catch {
+        // Ignore permission query failures and fall back to direct request.
+      }
+    }
+
+    if (!micReadyRef.current) {
+      const granted = await requestMic();
+      if (!granted) return;
+      micReadyRef.current = true;
     }
 
     setSupported(true);
@@ -154,6 +198,7 @@ export function useSpeechRecognition() {
         setError(toErrorMessage(code));
         if (code === "not-allowed" || code === "service-not-allowed" || code === "audio-capture") {
           shouldRestartRef.current = false;
+          micReadyRef.current = false;
         }
       };
 
@@ -191,7 +236,7 @@ export function useSpeechRecognition() {
     } catch {
       // Ignore "already started" style exceptions.
     }
-  }, [armSilenceStop]);
+  }, [armSilenceStop, requestMic]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -214,4 +259,3 @@ export function useSpeechRecognition() {
     error
   };
 }
-

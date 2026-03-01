@@ -4,11 +4,12 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 import { CheckCircle2, Loader2, Sparkles } from "lucide-react";
 import { createPayment } from "@/lib/createPayment";
+import { PAID_PLAN_PRICES_INR, formatInr } from "@/lib/pricing";
 
 const PLAN_OPTIONS = [
-  { label: "Basic", value: "BASIC", amount: 1 },
-  { label: "Pro", value: "PRO", amount: 2 },
-  { label: "Pro Weekly", value: "PRO_WEEKLY", amount: 1 }
+  { label: "Basic", value: "BASIC", amount: PAID_PLAN_PRICES_INR.BASIC },
+  { label: "Pro", value: "PRO", amount: PAID_PLAN_PRICES_INR.PRO },
+  { label: "Pro Weekly", value: "PRO_WEEKLY", amount: PAID_PLAN_PRICES_INR.PRO_WEEKLY }
 ] as const;
 
 type PaymentPlan = (typeof PLAN_OPTIONS)[number]["value"];
@@ -32,7 +33,7 @@ export function UPIPaymentCard({ defaultPlan = "BASIC" }: UPIPaymentCardProps) {
     try {
       await createPayment({
         plan: selected.value.toLowerCase() as "basic" | "pro" | "pro_weekly",
-        amountInr: selected.amount as 1 | 2
+        amountInr: selected.amount
       });
       setMessage("Payment submitted for verification. Status: pending.");
     } catch (err) {
@@ -57,14 +58,14 @@ export function UPIPaymentCard({ defaultPlan = "BASIC" }: UPIPaymentCardProps) {
           >
             {PLAN_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label} - INR {option.amount} {option.value === "PRO_WEEKLY" ? "/ week" : "/ month"}
+                {option.label} - ₹{formatInr(option.amount)} {option.value === "PRO_WEEKLY" ? "/ week" : "/ month"}
               </option>
             ))}
           </select>
         </label>
 
         <p className="mt-3 rounded-xl border border-cyan-300/35 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-100">
-          Amount: INR {selected.amount}
+          Amount: ₹{formatInr(selected.amount)}
         </p>
 
         <div className="mt-4 rounded-xl border border-slate-500/30 bg-slate-900/60 p-3 text-xs text-slate-400">

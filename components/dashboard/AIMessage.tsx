@@ -16,7 +16,7 @@ export function AIMessage({ message, modelLabel }: AIMessageProps) {
     <div className={cn("px-chat-message flex w-full animate-fade-slide", isUser ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "px-chat-bubble chat-bubble px-ai-message max-w-[88%] rounded-2xl border px-3 py-2 text-sm",
+          "px-chat-bubble chat-bubble px-ai-message rounded-2xl border px-3 py-2 text-sm",
           isUser
             ? "px-chat-bubble-user border-slate-500/30 bg-slate-900/70 text-slate-100"
             : "px-chat-bubble-ai border-cyan-300/35 bg-cyan-400/10 text-cyan-50 shadow-[0_0_20px_rgba(34,211,238,0.14)]"

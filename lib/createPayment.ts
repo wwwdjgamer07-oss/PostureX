@@ -5,7 +5,7 @@ import { notify } from "@/lib/notify";
 
 export interface PaymentInput {
   plan: "basic" | "pro" | "pro_weekly";
-  amountInr: 1 | 2;
+  amountInr: number;
 }
 
 export async function createPayment(input: PaymentInput) {

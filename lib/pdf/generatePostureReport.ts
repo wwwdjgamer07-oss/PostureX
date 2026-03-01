@@ -240,7 +240,7 @@ export async function generatePostureReport(data: PostureReportData) {
   doc.setTextColor(...COLORS.text);
   doc.setFontSize(19);
   doc.text("Engineered posture intelligence", PAGE.margin + 6, 73);
-  doc.text("for extreme people", PAGE.margin + 6, 81);
+  doc.text("for focused professionals", PAGE.margin + 6, 81);
 
   let y = 94;
 

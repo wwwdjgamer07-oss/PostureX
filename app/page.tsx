@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AmbientBackground } from "@/components/AmbientBackground";
 import { PostureXHeroAnimation } from "@/components/PostureXHeroAnimation";
 import { StartFreeButton } from "@/components/StartFreeButton";
+import { PAID_PLAN_PRICES_INR, formatInr } from "@/lib/pricing";
 
 const featureItems = [
   {
@@ -23,16 +24,28 @@ const featureItems = [
 ];
 
 const pricing = [
-  { name: "Free", price: "INR 0", description: "For limited sessions and basic analytics.", cta: "Get Started", href: "/pricing", smart: true },
-  { name: "Basic", price: "INR 1", description: "Unlimited sessions with alerts and PDF reports.", cta: "Choose Basic", href: "/pricing?plan=basic", smart: true },
-  { name: "Pro", price: "INR 2", description: "Advanced AI insights, trends, and team dashboard.", cta: "Choose Pro", featured: true, href: "/pricing?plan=pro", smart: true },
+  { name: "Free", price: "₹0", description: "For limited sessions and basic analytics.", cta: "Start Free", href: "/pricing", startFree: true },
+  {
+    name: "Basic",
+    price: `₹${formatInr(PAID_PLAN_PRICES_INR.BASIC)} / month`,
+    description: "Unlimited sessions with alerts and PDF reports.",
+    cta: "Choose Basic",
+    href: "/pricing?plan=basic"
+  },
+  {
+    name: "Pro",
+    price: `₹${formatInr(PAID_PLAN_PRICES_INR.PRO)} / month`,
+    description: "Advanced AI insights, trends, and team dashboard.",
+    cta: "Choose Pro",
+    featured: true,
+    href: "/pricing?plan=pro"
+  },
   {
     name: "Pro Weekly",
-    price: "INR 1",
+    price: `₹${formatInr(PAID_PLAN_PRICES_INR.PRO_WEEKLY)} / week`,
     description: "Weekly Pro membership with 20 PX Coins + 1 Blue Gem bonus.",
     cta: "Choose Pro Weekly",
-    href: "/pricing?plan=pro_weekly",
-    smart: true
+    href: "/pricing?plan=pro_weekly"
   }
 ];
 
@@ -74,7 +87,7 @@ export default function HomePage() {
               <p className="text-sm uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{plan.name}</p>
               <p className="mt-3 text-4xl font-semibold text-slate-900 dark:text-white">{plan.price}</p>
               <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{plan.description}</p>
-              {plan.smart ? (
+              {plan.startFree ? (
                 <StartFreeButton className="px-button mt-6 inline-flex w-full justify-center">{plan.cta}</StartFreeButton>
               ) : (
                 <Link href={plan.href} className="px-button mt-6 inline-flex w-full justify-center">

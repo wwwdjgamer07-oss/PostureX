@@ -18,7 +18,14 @@ const COLORS = {
 };
 
 function formatDate(dateStr: string) {
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "2-digit", year: "numeric" }).format(new Date(`${dateStr}T00:00:00.000Z`));
+  const date = new Date(`${dateStr}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return dateStr;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+    timeZone: "UTC"
+  }).format(date);
 }
 
 function formatDuration(seconds: number) {
@@ -84,11 +91,25 @@ function drawGraph(doc: jsPDF, points: Array<{ label: string; value: number }>, 
   });
 }
 
+function prepareReportPage(doc: jsPDF) {
+  doc.setFillColor(...COLORS.bg);
+  doc.rect(0, 0, PAGE.width, PAGE.height, "F");
+}
+
+function ensureSectionFits(doc: jsPDF, startY: number, sectionHeight: number) {
+  const footerReserve = 18;
+  if (startY + sectionHeight <= PAGE.height - footerReserve) {
+    return startY;
+  }
+  doc.addPage();
+  prepareReportPage(doc);
+  return PAGE.margin;
+}
+
 export async function generatePosturePDF(data: PostureReportMetrics): Promise<Buffer> {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
 
-  doc.setFillColor(...COLORS.bg);
-  doc.rect(0, 0, PAGE.width, PAGE.height, "F");
+  prepareReportPage(doc);
 
   drawPanel(doc, PAGE.margin, PAGE.margin, PAGE.width - PAGE.margin * 2, 24);
   doc.setTextColor(...COLORS.accent);
@@ -163,8 +184,25 @@ export async function generatePosturePDF(data: PostureReportMetrics): Promise<Bu
     doc.setFont("helvetica", "normal");
   });
 
-  const aiY = metricsY + 64;
-  drawPanel(doc, PAGE.margin, aiY, PAGE.width - PAGE.margin * 2, 60);
+  const contentWidth = PAGE.width - PAGE.margin * 2 - 10;
+  const summaryLinesRaw = doc.splitTextToSize(data.aiInsightsSummary, contentWidth);
+  const summaryLines = Array.isArray(summaryLinesRaw) ? summaryLinesRaw : [String(summaryLinesRaw)];
+  const recommendationLines = data.recommendedCorrections.slice(0, 3).map((item, index) => {
+    const text = doc.splitTextToSize(`${index + 1}. ${item}`, PAGE.width - PAGE.margin * 2 - 14);
+    return Array.isArray(text) ? text : [String(text)];
+  });
+
+  const summaryPanelHeight = 14 + summaryLines.length * 4 + 8;
+  const recommendationPanelHeight =
+    12 +
+    recommendationLines.reduce((sum, lines) => sum + lines.length * 4 + 3, 0) +
+    5;
+  const totalSectionHeight = summaryPanelHeight + 6 + recommendationPanelHeight;
+
+  let aiY = metricsY + 64;
+  aiY = ensureSectionFits(doc, aiY, totalSectionHeight);
+
+  drawPanel(doc, PAGE.margin, aiY, PAGE.width - PAGE.margin * 2, summaryPanelHeight);
   doc.setTextColor(...COLORS.text);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
@@ -172,20 +210,22 @@ export async function generatePosturePDF(data: PostureReportMetrics): Promise<Bu
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...COLORS.muted);
   doc.setFontSize(8.4);
-  const insightLines = doc.splitTextToSize(data.aiInsightsSummary, PAGE.width - PAGE.margin * 2 - 10);
-  doc.text(insightLines, PAGE.margin + 5, aiY + 13);
+  doc.text(summaryLines, PAGE.margin + 5, aiY + 13);
 
-  const recommendationY = aiY + 28;
+  const recommendationY = aiY + summaryPanelHeight + 6;
+  drawPanel(doc, PAGE.margin, recommendationY, PAGE.width - PAGE.margin * 2, recommendationPanelHeight);
   doc.setTextColor(...COLORS.text);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9.5);
-  doc.text("Recommended Corrections", PAGE.margin + 5, recommendationY);
+  doc.text("Recommended Corrections", PAGE.margin + 5, recommendationY + 7);
   doc.setTextColor(...COLORS.muted);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.2);
-  data.recommendedCorrections.slice(0, 3).forEach((item, index) => {
-    const text = doc.splitTextToSize(`${index + 1}. ${item}`, PAGE.width - PAGE.margin * 2 - 14);
-    doc.text(text, PAGE.margin + 7, recommendationY + 6 + index * 8);
+
+  let currentY = recommendationY + 13;
+  recommendationLines.forEach((lines) => {
+    doc.text(lines, PAGE.margin + 7, currentY);
+    currentY += lines.length * 4 + 3;
   });
 
   doc.setDrawColor(34, 211, 238);

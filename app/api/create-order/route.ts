@@ -4,27 +4,15 @@ import { z } from "zod";
 import { parseJsonBody, sanitizeText } from "@/lib/api/request";
 import { apiError, apiOk } from "@/lib/api/response";
 import { isProActive } from "@/lib/subscriptionLifecycle";
+import { resolveExpectedAmountInr, type PaidPlan } from "@/lib/pricing";
 
 export const runtime = "nodejs";
-
-type PaidPlan = "BASIC" | "PRO" | "PRO_WEEKLY";
-
-const PLAN_PRICES_INR: Record<PaidPlan, number> = {
-  BASIC: 1,
-  PRO: 2,
-  PRO_WEEKLY: 1
-};
 
 function normalizePlanTier(value: unknown): "FREE" | "BASIC" | "PRO" {
   const normalized = String(value ?? "").toUpperCase();
   if (normalized === "BASIC") return "BASIC";
   if (normalized === "PRO") return "PRO";
   return "FREE";
-}
-
-function resolveExpectedAmountInr(plan: PaidPlan, allowBasicToProUpgrade: boolean): number {
-  if (allowBasicToProUpgrade && plan === "PRO") return 1;
-  return PLAN_PRICES_INR[plan];
 }
 
 function isMissingPaymentsTableError(message: string) {

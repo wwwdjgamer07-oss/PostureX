@@ -177,12 +177,7 @@ async function selectSessions(supabase: SupabaseClient, userId: string, range: R
     return (fallback.data ?? []) as SessionLikeRow[];
   }
 
-  const normalizedError = String(fallback.error.message || "").toLowerCase();
-  const missingAvgFatigue = normalizedError.includes("avg_fatigue") && normalizedError.includes("does not exist");
-  if (!missingAvgFatigue) {
-    throw new Error(fallback.error.message || "Failed to load sessions.");
-  }
-
+  // If the first fallback failed, we attempt the compatibility query.
   // Compatibility fallback for schemas that do not include avg_fatigue.
   const fallbackWithoutFatigue = await supabase
     .from("sessions")
