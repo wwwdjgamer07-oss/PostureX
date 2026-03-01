@@ -13,6 +13,7 @@ export default function PongMobile({ onExit }: PongMobileProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number | null>(null);
   const playerY = useRef(240);
+  const playerTargetY = useRef(240);
   const aiY = useRef(240);
   const ball = useRef({ x: 180, y: 320, vx: 180, vy: 140 });
   const [score, setScore] = useState({ you: 0, ai: 0 });
@@ -21,6 +22,7 @@ export default function PongMobile({ onExit }: PongMobileProps) {
     const container = containerRef.current;
     const canvas = canvasRef.current;
     if (!container || !canvas) return;
+    canvas.style.touchAction = "none";
 
     const resize = () => {
       const width = container.clientWidth;
@@ -44,6 +46,28 @@ export default function PongMobile({ onExit }: PongMobileProps) {
   }, []);
 
   useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const updateFromTouch = (event: globalThis.TouchEvent) => {
+      if (!canvasRef.current || event.touches.length === 0) return;
+      event.preventDefault();
+      const rect = canvasRef.current.getBoundingClientRect();
+      const touch = event.touches[0];
+      const next = touch.clientY - rect.top;
+      playerTargetY.current = next - canvasRef.current.height * 0.075;
+    };
+
+    canvas.addEventListener("touchstart", updateFromTouch, { passive: false });
+    canvas.addEventListener("touchmove", updateFromTouch, { passive: false });
+
+    return () => {
+      canvas.removeEventListener("touchstart", updateFromTouch);
+      canvas.removeEventListener("touchmove", updateFromTouch);
+    };
+  }, []);
+
+  useEffect(() => {
     const loop = () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -59,6 +83,8 @@ export default function PongMobile({ onExit }: PongMobileProps) {
 
       aiY.current += (ball.current.y - (aiY.current + paddleH / 2)) * 0.08;
       aiY.current = Math.max(0, Math.min(h - paddleH, aiY.current));
+      playerTargetY.current = Math.max(0, Math.min(h - paddleH, playerTargetY.current));
+      playerY.current += (playerTargetY.current - playerY.current) * 0.35;
       playerY.current = Math.max(0, Math.min(h - paddleH, playerY.current));
 
       ball.current.x += ball.current.vx * dt;
@@ -126,17 +152,6 @@ export default function PongMobile({ onExit }: PongMobileProps) {
     };
   }, [score.ai, score.you]);
 
-  const moveUp = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    playerY.current = Math.max(0, playerY.current - canvas.height * 0.1);
-  };
-  const moveDown = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    playerY.current = Math.min(canvas.height - canvas.height * 0.15, playerY.current + canvas.height * 0.1);
-  };
-
   return (
     <div className="fixed inset-0 flex min-h-[100dvh] flex-col bg-[#020617] text-white">
       <div className="flex h-12 items-center justify-between border-b border-cyan-500/20 px-3">
@@ -150,19 +165,12 @@ export default function PongMobile({ onExit }: PongMobileProps) {
         </button>
       </div>
 
-      <div ref={containerRef} className="flex-1 w-full">
-        <canvas ref={canvasRef} className="h-full w-full" />
+      <div ref={containerRef} className="relative h-[65vh] w-full flex-1 md:h-[520px]">
+        <canvas ref={canvasRef} className="h-full w-full touch-none" />
       </div>
 
       <div className="space-y-2 border-t border-cyan-400/20 bg-white/5 p-3 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
-        <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={moveUp} className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-3 text-sm font-semibold">
-            Up
-          </button>
-          <button type="button" onClick={moveDown} className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-3 text-sm font-semibold">
-            Down
-          </button>
-        </div>
+        <p className="text-xs text-cyan-100/85">Touch and drag anywhere on the arena to move your paddle.</p>
         <GameModelSuggestion game="pong" compact />
       </div>
     </div>

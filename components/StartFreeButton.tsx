@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { resolveStartRoute } from "@/lib/subscriptionGate";
+import { cn } from "@/lib/utils";
 
 interface StartFreeButtonProps {
   className?: string;
@@ -17,7 +18,7 @@ export function StartFreeButton({ className, children }: StartFreeButtonProps) {
     <button
       type="button"
       disabled={loading}
-      className={className}
+      className={cn("ui-interactive", className)}
       onClick={() => {
         void (async () => {
           setLoading(true);

@@ -1,5 +1,6 @@
 import { BADGE_DEFINITIONS, evaluateBadges, type BadgeId, type RewardMetrics } from "@/lib/games/badges";
 import { buildXPProgress, type AvatarStage, type CoachPersonality } from "@/lib/games/xpSystem";
+import { addXP } from "@/lib/rewards/engine";
 
 export interface RewardProgressState {
   coins: number;
@@ -83,6 +84,7 @@ export function calculateRewards(metrics: RewardMetrics, currentProgress: Reward
 
   const coins = Math.max(0, Math.round(alignment * 0.4 + stability * 0.6));
   const xp = Math.max(0, Math.round(alignment * 0.8 + stability * 1.2));
+  addXP(xp, "game_completion");
 
   const badgesUnlocked = evaluateBadges(metrics, currentProgress.badges);
 

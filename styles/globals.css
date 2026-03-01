@@ -256,6 +256,27 @@ div {
     @apply p-4;
   }
 
+  .px-ai-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .px-ai-message {
+    display: inline-block;
+    max-width: 85%;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(20, 40, 70, 0.6);
+    color: #e6f2ff;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.45;
+  }
+
   .px-grid-pattern {
     background-image: linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
       linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Download } from "lucide-react";
 import { generatePostureReport } from "@/lib/pdf/generatePostureReport";
+import { cn } from "@/lib/utils";
 
 interface PdfReportButtonProps {
   data: {
@@ -97,7 +98,9 @@ export function PdfReportButton({ data }: PdfReportButtonProps) {
         void handleGenerate();
       }}
       disabled={isGenerating}
-      className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+      className={cn(
+        "ui-interactive inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+      )}
     >
       <Download className="h-4 w-4" />
       {isGenerating ? "Generating..." : "PDF Report"}

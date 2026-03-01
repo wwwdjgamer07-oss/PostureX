@@ -9,10 +9,11 @@ import { CoachAvatarBubble } from "@/components/CoachAvatarBubble";
 import { FatigueIndicatorBar } from "@/components/FatigueIndicatorBar";
 import type { FatigueLevel } from "@/lib/fatigueDetection";
 import type { CoachEvent } from "@/lib/coachPersonality";
-import { generate_coach_message } from "@/lib/coachPersonality";
 import { getSensorAvailability, type SensorPostureFrame } from "@/lib/posture/sensorPosture";
 import { detectMobile, hasMobileSensorSupport } from "@/lib/mobileSensor";
 import type { PostureFrame, PostureMode, PostureSource } from "@/lib/posture/types";
+import { generatePXCoachMessage, type PostureSession } from "@/lib/pxCoach";
+import { addXP } from "@/lib/rewards/engine";
 import { usePostureFatigue } from "@/lib/usePostureFatigue";
 import type { PostureMetrics, RiskLevel } from "@/lib/postureEngine";
 import { toast } from "sonner";
@@ -30,6 +31,13 @@ const riskTone: Record<RiskLevel, string> = {
   HIGH: "border-orange-400/35 bg-orange-400/10 text-orange-700 dark:text-orange-200",
   SEVERE: "border-rose-400/35 bg-rose-400/10 text-rose-700 dark:text-rose-200"
 };
+
+const PX_COACH_HISTORY_KEY = "px_coach_session_history_v1";
+
+function safeMean(values: number[]) {
+  if (!values.length) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
 
 export function SessionScreenClient() {
   const [metrics, setMetrics] = useState<PostureMetrics>(defaultMetrics);
@@ -61,7 +69,13 @@ export function SessionScreenClient() {
   const autoFallbackTriggeredRef = useRef(false);
   const sessionIdRef = useRef<string | null>(null);
   const lastRecordSavedAtRef = useRef(0);
-  const [coachMessage, setCoachMessage] = useState("Welcome back. Settle in and we'll keep your posture smooth.");
+  const forwardLeanEventsRef = useRef(0);
+  const tiltLeftEventsRef = useRef(0);
+  const tiltRightEventsRef = useRef(0);
+  const lastForwardLeanCountAtRef = useRef(0);
+  const lastTiltCountAtRef = useRef(0);
+  const scoreTimelineRef = useRef<Array<{ score: number; ts: number }>>([]);
+  const [sessionHistory, setSessionHistory] = useState<PostureSession[]>([]);
 
   const resolvePostureSource = useCallback(
     (mode: PostureMode, cameraReady: boolean, canUseSensor: boolean): PostureSource => {
@@ -124,6 +138,22 @@ export function SessionScreenClient() {
     sync();
     query.addEventListener("change", sync);
     return () => query.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(PX_COACH_HISTORY_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as PostureSession[];
+      if (Array.isArray(parsed)) {
+        setSessionHistory(
+          parsed.filter((item) => item && typeof item === "object" && typeof item.date === "string").slice(-50)
+        );
+      }
+    } catch {
+      // ignore malformed local history
+    }
   }, []);
 
   const shouldAutoSensorStart = useMemo(
@@ -228,6 +258,41 @@ export function SessionScreenClient() {
         const message = await response.text();
         throw new Error(message || "Failed to save session.");
       }
+
+      const sessionXP = Math.max(15, Math.round(score * 0.55 + durationSeconds * 0.18));
+      addXP(sessionXP, "posture_session");
+
+      const now = Date.now();
+      const avgScore = Math.round((metrics.alignment + metrics.stability + metrics.symmetry) / 3);
+      const sessionStart = now - durationSeconds * 1000;
+      const timeline = scoreTimelineRef.current.filter((sample) => sample.ts >= sessionStart);
+      const first5 = timeline
+        .filter((sample) => sample.ts <= sessionStart + 5 * 60 * 1000)
+        .map((sample) => sample.score);
+      const last5 = timeline
+        .filter((sample) => sample.ts >= Math.max(sessionStart, now - 5 * 60 * 1000))
+        .map((sample) => sample.score);
+
+      const completedSession: PostureSession = {
+        date: new Date(now).toISOString(),
+        avgScore,
+        alignment: Math.round(metrics.alignment),
+        stability: Math.round(metrics.stability),
+        symmetry: Math.round(metrics.symmetry),
+        duration: durationSeconds,
+        forwardLeanEvents: forwardLeanEventsRef.current,
+        tiltLeftEvents: tiltLeftEventsRef.current,
+        tiltRightEvents: tiltRightEventsRef.current,
+        scoreFirst5min: Math.round(first5.length ? safeMean(first5) : avgScore),
+        scoreLast5min: Math.round(last5.length ? safeMean(last5) : avgScore)
+      };
+      setSessionHistory((previous) => {
+        const next = [...previous, completedSession].slice(-50);
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(PX_COACH_HISTORY_KEY, JSON.stringify(next));
+        }
+        return next;
+      });
     } catch (error) {
       toast.error("Session save failed", {
         description: error instanceof Error ? error.message : "Unexpected error while saving session."
@@ -240,32 +305,57 @@ export function SessionScreenClient() {
     lastRecordSavedAtRef.current = 0;
   }, [metrics.alignment, metrics.stability, metrics.symmetry]);
 
-  const resolveTrend = useCallback(() => {
-    const samples = postureSamplesRef.current;
-    if (samples.length < 5) return "stable" as const;
-    const delta = samples[samples.length - 1] - samples[0];
-    if (delta >= 4) return "improving" as const;
-    if (delta <= -4) return "declining" as const;
-    return "stable" as const;
-  }, []);
+  const buildCurrentCoachSession = useCallback(
+    (durationSeconds: number): PostureSession => {
+      const now = Date.now();
+      const avgScore = Math.round((metrics.alignment + metrics.stability + metrics.symmetry) / 3);
+      const sessionStart = now - durationSeconds * 1000;
+      const timeline = scoreTimelineRef.current.filter((sample) => sample.ts >= sessionStart);
+      const first5 = timeline
+        .filter((sample) => sample.ts <= sessionStart + 5 * 60 * 1000)
+        .map((sample) => sample.score);
+      const last5 = timeline
+        .filter((sample) => sample.ts >= Math.max(sessionStart, now - 5 * 60 * 1000))
+        .map((sample) => sample.score);
 
-  const postCoachEvent = useCallback((event: CoachEvent) => {
+      return {
+        date: new Date(now).toISOString(),
+        avgScore,
+        alignment: Math.round(metrics.alignment),
+        stability: Math.round(metrics.stability),
+        symmetry: Math.round(metrics.symmetry),
+        duration: durationSeconds,
+        forwardLeanEvents: forwardLeanEventsRef.current,
+        tiltLeftEvents: tiltLeftEventsRef.current,
+        tiltRightEvents: tiltRightEventsRef.current,
+        scoreFirst5min: Math.round(first5.length ? safeMean(first5) : avgScore),
+        scoreLast5min: Math.round(last5.length ? safeMean(last5) : avgScore)
+      };
+    },
+    [metrics.alignment, metrics.stability, metrics.symmetry]
+  );
+
+  const adaptiveCoachMessage = useMemo(() => {
+    return generatePXCoachMessage(buildCurrentCoachSession(sessionSeconds), sessionHistory);
+  }, [buildCurrentCoachSession, sessionHistory, sessionSeconds]);
+
+  const postCoachEvent = useCallback((_event?: CoachEvent) => {
+    void _event;
     const now = Date.now();
     if (now - coachLastEventAtRef.current < 7000) return;
-    setCoachMessage((previous) =>
-      generate_coach_message(event, previous, {
-        fatigueLevel: fatigue.fatigue_level,
-        sessionSeconds,
-        trend: resolveTrend(),
-        riskLevel: metrics.riskLevel,
-        hourOfDay: new Date().getHours()
-      })
-    );
     coachLastEventAtRef.current = now;
-  }, [fatigue.fatigue_level, metrics.riskLevel, resolveTrend, sessionSeconds]);
+  }, []);
 
   useEffect(() => {
     postureSamplesRef.current = [...postureSamplesRef.current, postureScore].slice(-8);
+  }, [postureScore]);
+
+  useEffect(() => {
+    if (!sessionIdRef.current) return;
+    const now = Date.now();
+    scoreTimelineRef.current = [...scoreTimelineRef.current, { score: postureScore, ts: now }].filter(
+      (sample) => sample.ts >= now - 2 * 60 * 60 * 1000
+    );
   }, [postureScore]);
 
   useEffect(() => {
@@ -312,10 +402,23 @@ export function SessionScreenClient() {
       onTick={setSessionSeconds}
       onCoachEvent={postCoachEvent}
       onPostureFrame={(frame) => {
+        const now = Date.now();
+        if (frame.forwardLean && now - lastForwardLeanCountAtRef.current > 2500) {
+          forwardLeanEventsRef.current += 1;
+          lastForwardLeanCountAtRef.current = now;
+        }
         void persistPostureRecord(frame);
       }}
       onSessionIdChange={(nextId) => {
         sessionIdRef.current = nextId;
+        if (nextId) {
+          forwardLeanEventsRef.current = 0;
+          tiltLeftEventsRef.current = 0;
+          tiltRightEventsRef.current = 0;
+          lastForwardLeanCountAtRef.current = 0;
+          lastTiltCountAtRef.current = 0;
+          scoreTimelineRef.current = [];
+        }
       }}
       onSessionStop={(durationSeconds, alertCount, sessionId, breakTaken) => {
         void stopSessionAndSave(durationSeconds, alertCount, sessionId, breakTaken, "camera");
@@ -329,12 +432,33 @@ export function SessionScreenClient() {
       }}
       onTick={setSessionSeconds}
       onCoachEvent={postCoachEvent}
-      onSensorFrame={setLatestSensorFrame}
+      onSensorFrame={(frame) => {
+        setLatestSensorFrame(frame);
+        const now = Date.now();
+        if (Math.abs(frame.roll) > 8 && now - lastTiltCountAtRef.current > 2500) {
+          if (frame.roll > 0) tiltRightEventsRef.current += 1;
+          else tiltLeftEventsRef.current += 1;
+          lastTiltCountAtRef.current = now;
+        }
+      }}
       onPostureFrame={(frame) => {
+        const now = Date.now();
+        if (frame.forwardLean && now - lastForwardLeanCountAtRef.current > 2500) {
+          forwardLeanEventsRef.current += 1;
+          lastForwardLeanCountAtRef.current = now;
+        }
         void persistPostureRecord(frame);
       }}
       onSessionIdChange={(nextId) => {
         sessionIdRef.current = nextId;
+        if (nextId) {
+          forwardLeanEventsRef.current = 0;
+          tiltLeftEventsRef.current = 0;
+          tiltRightEventsRef.current = 0;
+          lastForwardLeanCountAtRef.current = 0;
+          lastTiltCountAtRef.current = 0;
+          scoreTimelineRef.current = [];
+        }
       }}
       onSessionStop={(durationSeconds, alertCount, sessionId, breakTaken) => {
         void stopSessionAndSave(durationSeconds, alertCount, sessionId, breakTaken, "sensor");
@@ -384,7 +508,7 @@ export function SessionScreenClient() {
             <div className="grid h-12 w-12 place-items-center rounded-full border border-cyan-300/55 bg-cyan-400/15 text-lg font-bold text-cyan-100">PX</div>
             <div className="min-w-0 flex-1">
               <p className="text-[10px] uppercase tracking-[0.18em] text-cyan-200">PX Coach</p>
-              <div className="mt-1 rounded-2xl border border-cyan-400/30 bg-[#0a1930] px-3 py-2 text-sm text-slate-100">{coachMessage}</div>
+              <div className="mt-1 rounded-2xl border border-cyan-400/30 bg-[#0a1930] px-3 py-2 text-sm text-slate-100">{adaptiveCoachMessage}</div>
             </div>
           </div>
         </article>
@@ -459,7 +583,7 @@ export function SessionScreenClient() {
         </section>
 
         <section className="space-y-4">
-          <CoachAvatarBubble message={coachMessage} />
+          <CoachAvatarBubble message={adaptiveCoachMessage} />
 
           <article className="px-panel px-reveal px-hover-lift bg-slate-950/95 p-5 backdrop-blur-none md:bg-transparent md:backdrop-blur-xl" style={{ animationDelay: "220ms" }}>
             <div className="flex items-center justify-between">

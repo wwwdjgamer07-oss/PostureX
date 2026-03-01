@@ -1,0 +1,42 @@
+.ui-interactive,
+.ui-interactive * {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+button,
+a[role="button"],
+[role="button"],
+.ui-button,
+.card-button,
+.control-button,
+.nav-button,
+.dashboard-button,
+.game-button,
+.camera-button {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+button,
+[role="button"] {
+  -webkit-touch-callout: none;
+}
+
+:where(p, span, article, .content-text, .chat-message, .selectable-text):not(button *):not([role="button"] *) {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+textarea,
+input {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+

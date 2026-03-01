@@ -1,4 +1,5 @@
 import { detectMobile, hasMobileSensorSupport, requestSensorPermission } from "@/lib/mobileSensor";
+import { addXP } from "@/lib/rewards/engine";
 
 export interface SensorTrackingState {
   dateKey: string;
@@ -145,6 +146,7 @@ function applyFreeRewards(report: SensorDailyReport) {
   window.localStorage.setItem(TOTAL_XP_KEY, String(currentXp + XP_PER_GOOD_DAY));
   window.localStorage.setItem(STREAK_KEY, String(streak));
   window.localStorage.setItem(LAST_REWARD_DAY_KEY, report.dateKey);
+  addXP(XP_PER_GOOD_DAY, "sensor_streak");
 }
 
 function tiltFrom(beta: number, gamma: number) {
@@ -252,4 +254,3 @@ export class SensorPostureEngine {
     return { state: this.state, report, active: this.active };
   }
 }
-

@@ -321,7 +321,7 @@ export function AIChatPanel({
           </article>
         </div>
 
-        <div ref={scrollerRef} className="flex-1 space-y-3 overflow-y-auto p-3">
+        <div ref={scrollerRef} className="px-ai-messages flex-1 overflow-y-auto p-3">
           {messages.map((message) => (
             <AIMessage key={message.id} message={message} modelLabel={message.role === "assistant" ? messageModel[message.id] : null} />
           ))}

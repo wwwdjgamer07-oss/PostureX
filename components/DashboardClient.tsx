@@ -16,6 +16,7 @@ import { detectMobile, hasMobileSensorSupport } from "@/lib/mobileSensor";
 import { usePersonalizationProfile } from "@/lib/personalization/profileClient";
 import { resolveLevel } from "@/lib/games/xpSystem";
 import { useIsObsidianSkullTheme } from "@/lib/personalization/usePxTheme";
+import { addXP } from "@/lib/rewards/engine";
 import { readDailyReport, SENSOR_ACTIVE_KEY, SensorPostureEngine, type SensorDailyReport } from "@/lib/sensorPostureEngine";
 import { usePushNotifications } from "@/lib/usePushNotifications";
 import { useWallet } from "@/lib/stores/walletStore";
@@ -127,6 +128,18 @@ export function DashboardClient({ userId, planTier, initialSessions, initialDail
 
   useEffect(() => {
     void fetch("/api/subscription/sync", { method: "POST", credentials: "include" });
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const now = new Date();
+    const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const claimKey = "px_daily_login_reward_day";
+    const lastClaim = window.localStorage.getItem(claimKey);
+    if (lastClaim === dateKey) return;
+
+    addXP(20, "daily_login");
+    window.localStorage.setItem(claimKey, dateKey);
   }, []);
 
   useEffect(() => {

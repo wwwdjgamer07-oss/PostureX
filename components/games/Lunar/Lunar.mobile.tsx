@@ -20,6 +20,7 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
     const container = containerRef.current;
     const canvas = canvasRef.current;
     if (!container || !canvas) return;
+    canvas.style.touchAction = "none";
     const resize = () => {
       const width = container.clientWidth;
       const height = container.clientHeight;
@@ -38,6 +39,51 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
       obs.disconnect();
       window.removeEventListener("resize", resize);
       window.removeEventListener("orientationchange", resize);
+    };
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const updateTouchControls = (event: globalThis.TouchEvent) => {
+      if (!canvasRef.current) return;
+      event.preventDefault();
+
+      const rect = canvasRef.current.getBoundingClientRect();
+      let left = false;
+      let right = false;
+      let thrust = false;
+
+      for (let i = 0; i < event.touches.length; i += 1) {
+        const touch = event.touches[i];
+        const normalizedX = (touch.clientX - rect.left) / rect.width;
+        if (normalizedX >= 0.62) {
+          thrust = true;
+        } else if (normalizedX < 0.31) {
+          left = true;
+        } else {
+          right = true;
+        }
+      }
+
+      keysRef.current = { left, right, thrust };
+    };
+
+    const clearTouchControls = () => {
+      keysRef.current = { left: false, right: false, thrust: false };
+    };
+
+    canvas.addEventListener("touchstart", updateTouchControls, { passive: false });
+    canvas.addEventListener("touchmove", updateTouchControls, { passive: false });
+    canvas.addEventListener("touchend", updateTouchControls, { passive: false });
+    canvas.addEventListener("touchcancel", clearTouchControls);
+
+    return () => {
+      canvas.removeEventListener("touchstart", updateTouchControls);
+      canvas.removeEventListener("touchmove", updateTouchControls);
+      canvas.removeEventListener("touchend", updateTouchControls);
+      canvas.removeEventListener("touchcancel", clearTouchControls);
     };
   }, []);
 
@@ -124,10 +170,6 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
     };
   }, [fuel]);
 
-  const hold = (key: keyof typeof keysRef.current, state: boolean) => {
-    keysRef.current[key] = state;
-  };
-
   return (
     <div className="fixed inset-0 flex min-h-[100dvh] flex-col bg-[#020617] text-white">
       <div className="flex h-12 items-center justify-between border-b border-cyan-500/20 px-3">
@@ -141,40 +183,12 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
         </button>
       </div>
 
-      <div ref={containerRef} className="flex-1 w-full">
-        <canvas ref={canvasRef} className="h-full w-full" />
+      <div ref={containerRef} className="relative h-[65vh] w-full flex-1 md:h-[520px]">
+        <canvas ref={canvasRef} className="h-full w-full touch-none" />
       </div>
 
       <div className="space-y-2 border-t border-cyan-400/20 bg-white/5 p-3 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            onTouchStart={() => hold("left", true)}
-            onTouchEnd={() => hold("left", false)}
-            onTouchCancel={() => hold("left", false)}
-            className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-3 text-sm font-semibold"
-          >
-            Left
-          </button>
-          <button
-            type="button"
-            onTouchStart={() => hold("thrust", true)}
-            onTouchEnd={() => hold("thrust", false)}
-            onTouchCancel={() => hold("thrust", false)}
-            className="rounded-2xl border border-cyan-400/30 bg-cyan-500/20 p-3 text-sm font-semibold shadow-[0_0_24px_rgba(34,211,238,0.2)]"
-          >
-            Thrust
-          </button>
-          <button
-            type="button"
-            onTouchStart={() => hold("right", true)}
-            onTouchEnd={() => hold("right", false)}
-            onTouchCancel={() => hold("right", false)}
-            className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-3 text-sm font-semibold"
-          >
-            Right
-          </button>
-        </div>
+        <p className="text-xs text-cyan-100/85">Touch left side to rotate, touch right side to thrust.</p>
         <LunarLearningPanel compact />
       </div>
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface AIButtonProps {
   onClick: () => void;
@@ -12,7 +13,9 @@ export function AIButton({ onClick }: AIButtonProps) {
       <button
         type="button"
         onClick={onClick}
-        className="grid h-14 w-14 place-items-center rounded-full border border-cyan-300/45 bg-slate-900/70 text-cyan-200 shadow-[0_0_28px_rgba(34,211,238,0.22)] backdrop-blur-xl transition duration-300 hover:scale-[1.03] hover:shadow-[0_0_34px_rgba(34,211,238,0.3)] focus:outline-none focus:ring-2 focus:ring-cyan-300/55"
+        className={cn(
+          "ui-interactive grid h-14 w-14 place-items-center rounded-full border border-cyan-300/45 bg-slate-900/70 text-cyan-200 shadow-[0_0_28px_rgba(34,211,238,0.22)] backdrop-blur-xl transition duration-300 hover:scale-[1.03] hover:shadow-[0_0_34px_rgba(34,211,238,0.3)] focus:outline-none focus:ring-2 focus:ring-cyan-300/55"
+        )}
         aria-label="AI Coach"
       >
         <span className="absolute inset-0 rounded-full border border-cyan-300/30 opacity-0 transition group-hover:opacity-100 group-hover:animate-pulse" />

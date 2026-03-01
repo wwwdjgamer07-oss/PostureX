@@ -620,20 +620,20 @@ export function GlobalChatbot() {
             </div>
           </header>
 
-          <div ref={scrollerRef} className="relative z-10 flex-1 space-y-3 overflow-y-auto p-3">
+          <div ref={scrollerRef} className="px-ai-messages relative z-10 flex-1 overflow-y-auto p-3">
             {messages.map((message) => {
               const isUser = message.role === "user";
               return (
                 <div key={message.id} className={cn("px-chat-message flex w-full animate-fade-slide", isUser ? "justify-end" : "justify-start")}>
                   <div
                     className={cn(
-                      "px-chat-bubble max-w-[88%] rounded-2xl border px-3 py-2 text-sm",
+                      "px-chat-bubble px-ai-message max-w-[88%] rounded-2xl border px-3 py-2 text-sm",
                       isUser
                         ? "px-chat-bubble-user border-slate-500/30 bg-slate-900/75 text-slate-100"
                         : "px-chat-bubble-ai border-cyan-300/35 bg-cyan-400/10 text-cyan-50 shadow-[0_0_20px_rgba(34,211,238,0.14)]"
                     )}
                   >
-                    <p className="leading-relaxed">{message.content}</p>
+                    <p className="leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
                     {!isUser ? (
                       <button
                         type="button"

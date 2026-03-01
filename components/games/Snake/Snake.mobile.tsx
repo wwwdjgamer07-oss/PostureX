@@ -98,42 +98,79 @@ export default function SnakeMobile({ onExit }: SnakeMobileProps) {
       const oy = Math.floor((canvas.height - boardH) / 2);
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#0b1220";
+      ctx.fillStyle = "#8fc24a";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.fillStyle = "#0f172a";
+      ctx.fillStyle = "#a5d755";
       ctx.fillRect(ox, oy, boardW, boardH);
-
-      ctx.strokeStyle = "#1f2937";
-      ctx.lineWidth = 1;
-      for (let i = 1; i < GRID; i += 1) {
-        const x = ox + i * cell + 0.5;
-        const y = oy + i * cell + 0.5;
-        ctx.beginPath();
-        ctx.moveTo(x, oy);
-        ctx.lineTo(x, oy + boardH);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(ox, y);
-        ctx.lineTo(ox + boardW, y);
-        ctx.stroke();
+      ctx.fillStyle = "#9dd14f";
+      for (let y = 0; y < GRID; y += 1) {
+        for (let x = 0; x < GRID; x += 1) {
+          if ((x + y) % 2 === 0) ctx.fillRect(ox + x * cell, oy + y * cell, cell, cell);
+        }
       }
-
-      snakeRef.current.forEach((p, index) => {
-        ctx.fillStyle = index === 0 ? "#67e8f9" : "#22d3ee";
-        ctx.fillRect(ox + p.x * cell + 1, oy + p.y * cell + 1, cell - 2, cell - 2);
-      });
 
       const head = snakeRef.current[0];
-      if (head && cell >= 10) {
-        ctx.fillStyle = "#083344";
-        ctx.fillRect(ox + head.x * cell + Math.floor(cell * 0.3), oy + head.y * cell + Math.floor(cell * 0.28), 2, 2);
-        ctx.fillRect(ox + head.x * cell + Math.floor(cell * 0.62), oy + head.y * cell + Math.floor(cell * 0.28), 2, 2);
+      const bodyColor = "#4f7de8";
+      const headColor = "#4a73db";
+      for (let i = snakeRef.current.length - 1; i >= 1; i -= 1) {
+        const p = snakeRef.current[i];
+        const bx = ox + p.x * cell + cell * 0.08;
+        const by = oy + p.y * cell + cell * 0.14;
+        const bw = cell * 0.84;
+        const bh = cell * 0.72;
+        const br = Math.max(6, cell * 0.38);
+        ctx.fillStyle = bodyColor;
+        ctx.beginPath();
+        ctx.roundRect(bx, by, bw, bh, br);
+        ctx.fill();
       }
 
-      ctx.fillStyle = "#f43f5e";
-      ctx.fillRect(ox + foodRef.current.x * cell + 2, oy + foodRef.current.y * cell + 2, cell - 4, cell - 4);
+      if (head) {
+        const headCx = ox + head.x * cell + cell / 2;
+        const headCy = oy + head.y * cell + cell / 2;
+        const headW = cell * 0.92;
+        const headH = cell * 0.8;
+        const hr = Math.max(8, cell * 0.42);
+
+        ctx.save();
+        ctx.translate(headCx, headCy);
+        if (dirRef.current.x === 1) ctx.rotate(0);
+        if (dirRef.current.x === -1) ctx.rotate(Math.PI);
+        if (dirRef.current.y === -1) ctx.rotate(-Math.PI / 2);
+        if (dirRef.current.y === 1) ctx.rotate(Math.PI / 2);
+
+        ctx.fillStyle = headColor;
+        ctx.beginPath();
+        ctx.roundRect(-headW / 2, -headH / 2, headW, headH, hr);
+        ctx.fill();
+
+        const eyeR = Math.max(3, cell * 0.19);
+        const pupilR = Math.max(1.4, cell * 0.08);
+        const eyeOffsetX = cell * 0.21;
+        const eyeY = -cell * 0.16;
+        ctx.fillStyle = "#e5edff";
+        ctx.beginPath();
+        ctx.arc(eyeOffsetX, eyeY, eyeR, 0, Math.PI * 2);
+        ctx.arc(eyeOffsetX, -eyeY, eyeR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#1e3a8a";
+        ctx.beginPath();
+        ctx.arc(eyeOffsetX + eyeR * 0.25, eyeY, pupilR, 0, Math.PI * 2);
+        ctx.arc(eyeOffsetX + eyeR * 0.25, -eyeY, pupilR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      const fx = ox + foodRef.current.x * cell + cell / 2;
+      const fy = oy + foodRef.current.y * cell + cell / 2;
+      ctx.fillStyle = "#ef3f2f";
+      ctx.beginPath();
+      ctx.arc(fx, fy, Math.max(4, cell * 0.3), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#5fbf3e";
+      ctx.beginPath();
+      ctx.ellipse(fx + cell * 0.2, fy - cell * 0.3, cell * 0.12, cell * 0.07, -0.45, 0, Math.PI * 2);
+      ctx.fill();
 
       if (gameOver) {
         ctx.fillStyle = "rgba(0,0,0,0.55)";
@@ -163,10 +200,9 @@ export default function SnakeMobile({ onExit }: SnakeMobileProps) {
     touchStartRef.current = { x: touch.clientX, y: touch.clientY };
   };
 
-  const onTouchEnd = (event: React.TouchEvent<HTMLCanvasElement>) => {
-    const touch = event.changedTouches[0];
+  const applyTouchDirection = (touch: React.Touch) => {
     const start = touchStartRef.current;
-    if (!touch || !start) return;
+    if (!start) return;
 
     const dx = touch.clientX - start.x;
     const dy = touch.clientY - start.y;
@@ -177,6 +213,20 @@ export default function SnakeMobile({ onExit }: SnakeMobileProps) {
     } else {
       setDir(0, dy > 0 ? 1 : -1);
     }
+
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const onTouchMove = (event: React.TouchEvent<HTMLCanvasElement>) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    applyTouchDirection(touch);
+  };
+
+  const onTouchEnd = (event: React.TouchEvent<HTMLCanvasElement>) => {
+    const touch = event.changedTouches[0];
+    if (!touch) return;
+    applyTouchDirection(touch);
   };
 
   const restart = () => {
@@ -202,8 +252,8 @@ export default function SnakeMobile({ onExit }: SnakeMobileProps) {
         </button>
       </div>
 
-      <div ref={containerRef} className="flex-1 w-full bg-black">
-        <canvas ref={canvasRef} className="h-full w-full touch-none" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} />
+      <div ref={containerRef} className="relative h-[65vh] w-full flex-1 bg-black md:h-[520px]">
+        <canvas ref={canvasRef} className="h-full w-full touch-none" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} />
       </div>
 
       <div className="space-y-3 border-t border-cyan-400/20 bg-white/5 p-3 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">

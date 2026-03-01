@@ -8,9 +8,11 @@ import { Navbar } from "@/components/Navbar";
 import { PXPersonalizationController } from "@/components/PXPersonalizationController";
 import { ThemeLoader } from "@/components/ThemeLoader";
 import { ThemeController } from "@/components/ThemeController";
+import { RewardProvider } from "@/context/RewardProvider";
 import { getAppName, getAppUrl } from "@/lib/env";
 import { Toaster } from "sonner";
 import "@/styles/globals.css";
+import "@/styles/interaction-fix.css";
 
 const GlobalChatbot = dynamic(
   () => import("@/components/chat/GlobalChatbot").then((module) => module.GlobalChatbot),
@@ -68,16 +70,18 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className="antialiased">
         <Script src="https://js.puter.com/v2/" strategy="afterInteractive" />
-        <ThemeController />
-        <ThemeLoader />
-        <PXPersonalizationController />
-        <AuthHashRouter />
-        <DevServiceWorkerReset />
-        <DailyReminderScheduler />
-        <Navbar />
-        <Toaster richColors theme="dark" position="top-right" />
-        <main className="app-root min-h-dvh flex flex-col px-4 pt-20 pb-[calc(env(safe-area-inset-bottom)+6rem)] sm:pb-10">{children}</main>
-        <GlobalChatbot />
+        <RewardProvider>
+          <ThemeController />
+          <ThemeLoader />
+          <PXPersonalizationController />
+          <AuthHashRouter />
+          <DevServiceWorkerReset />
+          <DailyReminderScheduler />
+          <Navbar />
+          <Toaster richColors theme="dark" position="top-right" />
+          <main className="app-root min-h-dvh flex flex-col px-4 pt-20 pb-[calc(env(safe-area-inset-bottom)+6rem)] sm:pb-10">{children}</main>
+          <GlobalChatbot />
+        </RewardProvider>
       </body>
     </html>
   );

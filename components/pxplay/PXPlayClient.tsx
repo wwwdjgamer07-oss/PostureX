@@ -322,35 +322,87 @@ function SnakeGame({ onExit }: { onExit: () => void }) {
     const oy = Math.floor((canvas.height - boardH) / 2);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#4d8430";
+    ctx.fillStyle = "#8fc24a";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#a5d64f";
+    ctx.fillStyle = "#a5d755";
     ctx.fillRect(ox, oy, boardW, boardH);
-    ctx.fillStyle = "#9fce49";
+    ctx.fillStyle = "#9dd14f";
     for (let y = 0; y < GRID; y += 1) {
       for (let x = 0; x < GRID; x += 1) {
         if ((x + y) % 2 === 0) ctx.fillRect(ox + x * cell, oy + y * cell, cell, cell);
       }
     }
 
-    snakeRef.current.forEach((p, i) => {
-      ctx.fillStyle = i === 0 ? "#2f5fd2" : "#4a74de";
-      const radius = Math.max(3, Math.floor(cell * 0.38));
-      const cx = ox + p.x * cell + cell / 2;
-      const cy = oy + p.y * cell + cell / 2;
-      ctx.beginPath();
-      ctx.roundRect(cx - radius, cy - radius, radius * 2, radius * 2, radius * 0.95);
-      ctx.fill();
-    });
+    const head = snakeRef.current[0];
+    const bodyColor = "#4f7de8";
+    const headColor = "#4a73db";
 
-    ctx.fillStyle = "#ef4444";
+    for (let i = snakeRef.current.length - 1; i >= 1; i -= 1) {
+      const p = snakeRef.current[i];
+      const bx = ox + p.x * cell + cell * 0.08;
+      const by = oy + p.y * cell + cell * 0.14;
+      const bw = cell * 0.84;
+      const bh = cell * 0.72;
+      const br = Math.max(6, cell * 0.38);
+      ctx.fillStyle = bodyColor;
+      ctx.beginPath();
+      ctx.roundRect(bx, by, bw, bh, br);
+      ctx.fill();
+    }
+
+    if (head) {
+      const headCx = ox + head.x * cell + cell / 2;
+      const headCy = oy + head.y * cell + cell / 2;
+      const headW = cell * 0.92;
+      const headH = cell * 0.8;
+      const hr = Math.max(8, cell * 0.42);
+
+      ctx.save();
+      ctx.translate(headCx, headCy);
+      if (dirRef.current.x === 1) ctx.rotate(0);
+      if (dirRef.current.x === -1) ctx.rotate(Math.PI);
+      if (dirRef.current.y === -1) ctx.rotate(-Math.PI / 2);
+      if (dirRef.current.y === 1) ctx.rotate(Math.PI / 2);
+
+      ctx.fillStyle = headColor;
+      ctx.beginPath();
+      ctx.roundRect(-headW / 2, -headH / 2, headW, headH, hr);
+      ctx.fill();
+
+      const eyeR = Math.max(3, cell * 0.19);
+      const pupilR = Math.max(1.4, cell * 0.08);
+      const eyeOffsetX = cell * 0.21;
+      const eyeY = -cell * 0.16;
+
+      ctx.fillStyle = "#e5edff";
+      ctx.beginPath();
+      ctx.arc(eyeOffsetX, eyeY, eyeR, 0, Math.PI * 2);
+      ctx.arc(eyeOffsetX, -eyeY, eyeR, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#1e3a8a";
+      ctx.beginPath();
+      ctx.arc(eyeOffsetX + eyeR * 0.25, eyeY, pupilR, 0, Math.PI * 2);
+      ctx.arc(eyeOffsetX + eyeR * 0.25, -eyeY, pupilR, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#3156b8";
+      ctx.beginPath();
+      ctx.arc(headW * 0.35, 0, Math.max(1.8, cell * 0.09), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.fillStyle = "#ef3f2f";
     const fx = ox + foodRef.current.x * cell + cell / 2;
     const fy = oy + foodRef.current.y * cell + cell / 2;
     ctx.beginPath();
-    ctx.arc(fx, fy, Math.max(2, cell * 0.18), 0, Math.PI * 2);
+    ctx.arc(fx, fy, Math.max(4, cell * 0.3), 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "#16a34a";
-    ctx.fillRect(fx - 1, fy - Math.max(3, cell * 0.22), 2, Math.max(2, cell * 0.1));
+    ctx.fillStyle = "#5fbf3e";
+    ctx.beginPath();
+    ctx.ellipse(fx + cell * 0.2, fy - cell * 0.3, cell * 0.12, cell * 0.07, -0.45, 0, Math.PI * 2);
+    ctx.fill();
 
     if (over) {
       ctx.fillStyle = "rgba(46,79,30,0.72)";
