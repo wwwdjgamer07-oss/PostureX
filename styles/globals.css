@@ -20,6 +20,7 @@
   --px-theme-card-image: none;
   --px-theme-header-image: none;
   --px-theme-accent-image: none;
+  --kb-offset: 0px;
 }
 
 * {
@@ -294,30 +295,143 @@ div {
     z-index: 50;
   }
 
+  .chat-panel {
+    padding-bottom: 0;
+  }
+
+  .floating-ai-btn {
+    position: fixed;
+    right: 18px;
+    bottom: calc(120px + var(--kb-offset, 0px));
+    z-index: 50;
+  }
+
+  .chat-input-bar {
+    position: relative;
+  }
+
+  .chat-bubble {
+    max-width: 82%;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  #micFixBtn,
+  .mic-fix-btn {
+    margin-left: 8px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(125, 211, 252, 0.4);
+    background: #0ea5e9;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    transition: filter 120ms ease, transform 120ms ease;
+  }
+
+  .mic-fix-btn:hover {
+    filter: brightness(1.06);
+  }
+
   .px-game-container {
     padding-bottom: 0;
   }
 
-  .breakout-wrap {
-    width: 100%;
-    max-width: 100vw;
+  .game-container {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #020617;
+    overflow: hidden;
+  }
+
+  .game-container canvas {
+    display: block;
+  }
+
+  .lander-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    display: block;
+  }
+
+  .lander-controls {
+    position: fixed;
+    left: 50%;
+    bottom: env(safe-area-inset-bottom, 18px);
+    transform: translateX(-50%);
     display: flex;
-    justify-content: center;
-    align-items: center;
+    gap: 14px;
+    padding: 10px 14px;
+    border-radius: 18px;
+    background: rgba(2, 6, 23, 0.65);
+    backdrop-filter: blur(8px);
+    z-index: 20;
+    margin-bottom: 56px;
+    width: min(420px, 92vw);
+    justify-content: space-between;
+  }
+
+  .lander-controls button {
+    min-width: 74px;
+    height: 52px;
+    font-size: 16px;
+    border-radius: 14px;
+  }
+
+  .pong-stage {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle at 50% 40%, #0b1220 0%, #020617 100%);
+  }
+
+  .pong-stage canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .pong-controls {
+    position: fixed;
+    bottom: env(safe-area-inset-bottom, 18px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 16px;
+    background: rgba(2, 6, 23, 0.55);
+    backdrop-filter: blur(8px);
+    z-index: 20;
+  }
+
+  .breakout-stage {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle at 50% 30%, #0b1220 0%, #020617 100%);
   }
 
   #breakoutCanvas {
     width: 100%;
-    height: auto;
-    aspect-ratio: 9 / 16;
-    max-height: 65vh;
-    border-radius: 16px;
-    background: #000;
+    height: 100%;
+    display: block;
   }
 
   .breakout-controls {
-    width: 100%;
-    margin-top: 12px;
+    position: fixed;
+    bottom: env(safe-area-inset-bottom, 18px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 16px;
+    background: rgba(2, 6, 23, 0.55);
+    backdrop-filter: blur(8px);
+    z-index: 20;
   }
 
   .snake-restart-btn {
@@ -941,6 +1055,54 @@ html[data-ui-skin="px-elite"] .px-panel {
 
   .app-root {
     overscroll-behavior-y: auto;
+  }
+
+  .px-global-chat-panel.chat-panel {
+    padding-bottom: 104px;
+  }
+
+  .px-global-chat-panel .px-ai-messages {
+    padding-bottom: 116px;
+  }
+
+  .px-global-chat-panel .chat-input-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 12px 14px calc(env(safe-area-inset-bottom, 10px) + 8px);
+    background: rgba(2, 6, 23, 0.85);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(120, 180, 255, 0.15);
+    z-index: 40;
+  }
+
+  .px-global-chat-trigger.floating-ai-btn {
+    right: 18px;
+    bottom: calc(120px + var(--kb-offset, 0px));
+  }
+}
+
+@media (min-width: 769px) {
+  .lander-controls {
+    bottom: 28px;
+    margin-bottom: 0;
+  }
+
+  .px-global-chat-trigger.floating-ai-btn {
+    right: 24px;
+    bottom: 24px;
+  }
+
+  .px-global-chat-panel .chat-input-bar {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    padding: 0.75rem;
+    background: transparent;
+    backdrop-filter: none;
+    border-top: 1px solid rgba(165, 243, 252, 0.15);
   }
 }
 

@@ -39,6 +39,11 @@ function createMessage(role: "user" | "assistant", content: string): PostureAIMe
   };
 }
 
+function isMicBlockedMessage(message: string | null) {
+  if (!message) return false;
+  return /microphone|permission|blocked|denied/i.test(message);
+}
+
 export function AIChatPanel({
   userId,
   metrics,
@@ -59,6 +64,7 @@ export function AIChatPanel({
   const [emotion, setEmotion] = useState("neutral");
   const [voiceEnabled, setVoiceEnabled] = useState<boolean>(true);
   const [micError, setMicError] = useState<string | null>(null);
+  const [micPermissionState, setMicPermissionState] = useState<PermissionState | "unknown">("unknown");
   const [messageModel, setMessageModel] = useState<Record<string, string>>({});
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
@@ -181,6 +187,24 @@ export function AIChatPanel({
     return () => window.speechSynthesis.removeEventListener("voiceschanged", setPreferred);
   }, []);
 
+  const syncMicPermissionState = useCallback(async () => {
+    if (typeof window === "undefined" || typeof navigator === "undefined" || !("permissions" in navigator)) {
+      setMicPermissionState("unknown");
+      return;
+    }
+    try {
+      const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
+      setMicPermissionState(status.state);
+    } catch {
+      setMicPermissionState("unknown");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mode === "floating" && !isOpen) return;
+    void syncMicPermissionState();
+  }, [isOpen, mode, syncMicPermissionState]);
+
   const speakText = (text: string, emotionTone: string) => {
     if (!voiceEnabled || typeof window === "undefined" || !("speechSynthesis" in window)) return;
     if (lastSpokenMessageRef.current === text) return;
@@ -255,6 +279,13 @@ export function AIChatPanel({
         setTyping(false);
       }
     }, 380);
+  };
+
+  const isMicDenied = micPermissionState === "denied" || isMicBlockedMessage(micError);
+  const micStatusText = isMicDenied ? "Microphone blocked" : micError ?? "";
+  const handleMicFix = () => {
+    if (typeof window === "undefined") return;
+    window.alert("Enable microphone in browser: Site Settings -> Microphone -> Allow.");
   };
 
   return (
@@ -345,9 +376,21 @@ export function AIChatPanel({
             onSubmit={sendMessage}
             disabled={typing}
             placeholder="Ask about your posture..."
-            onError={(message) => setMicError(message || null)}
+            onError={(message) => {
+              setMicError(message || null);
+              void syncMicPermissionState();
+            }}
           />
-          {micError ? <p className="mt-2 text-[11px] text-amber-200/90">{micError}</p> : null}
+          {micStatusText ? (
+            <div className="mt-2 flex items-center text-[11px]">
+              <p className={cn(isMicDenied ? "font-medium text-rose-300" : "text-amber-200/90")}>{micStatusText}</p>
+              {isMicDenied ? (
+                <button type="button" className="mic-fix-btn" onClick={handleMicFix}>
+                  Enable
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
     </aside>

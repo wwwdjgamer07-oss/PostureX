@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Bot, Sparkles, Volume2, X } from "lucide-react";
 import { SkullBrainIcon } from "@/components/icons/SkullIcons";
@@ -93,6 +93,11 @@ function compactMicError(message: string) {
   return clean.length > 140 ? `${clean.slice(0, 140)}...` : clean;
 }
 
+function isMicBlockedMessage(message: string | null) {
+  if (!message) return false;
+  return /microphone|permission|blocked|denied/i.test(message);
+}
+
 export function GlobalChatbot() {
   const isObsidianSkull = useIsObsidianSkullTheme();
   const router = useRouter();
@@ -105,6 +110,7 @@ export function GlobalChatbot() {
   const [typing, setTyping] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [micError, setMicError] = useState<string | null>(null);
+  const [micPermissionState, setMicPermissionState] = useState<PermissionState | "unknown">("unknown");
   const [messageTone, setMessageTone] = useState<Record<string, string>>({});
   const [messageProvider, setMessageProvider] = useState<Record<string, "gemini" | "system">>({});
   const [messageModel, setMessageModel] = useState<Record<string, string>>({});
@@ -119,6 +125,19 @@ export function GlobalChatbot() {
 
   const storageBase = useMemo(() => `posturex.ai.global.${userId ?? "guest"}`, [userId]);
   const storageKey = `${storageBase}.messages`;
+
+  const syncMicPermissionState = useCallback(async () => {
+    if (typeof window === "undefined" || typeof navigator === "undefined" || !("permissions" in navigator)) {
+      setMicPermissionState("unknown");
+      return;
+    }
+    try {
+      const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
+      setMicPermissionState(status.state);
+    } catch {
+      setMicPermissionState("unknown");
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -303,6 +322,30 @@ export function GlobalChatbot() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const root = document.documentElement;
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const updateKeyboardOffset = () => {
+      const keyboardHeight = Math.max(0, window.innerHeight - viewport.height);
+      root.style.setProperty("--kb-offset", keyboardHeight > 0 ? `${keyboardHeight}px` : "0px");
+    };
+
+    updateKeyboardOffset();
+    viewport.addEventListener("resize", updateKeyboardOffset);
+    return () => {
+      viewport.removeEventListener("resize", updateKeyboardOffset);
+      root.style.setProperty("--kb-offset", "0px");
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    void syncMicPermissionState();
+  }, [isOpen, syncMicPermissionState]);
 
   const speakText = (text: string, emotionTone: string, force = false) => {
     if (!voiceEnabled || typeof window === "undefined" || !("speechSynthesis" in window)) return;
@@ -549,15 +592,22 @@ export function GlobalChatbot() {
 
   const tooltipText = "PostureX AI";
   const personalizedLabel = memory?.user_name ? `PostureX AI - ${memory.user_name}` : "PostureX AI";
+  const isMicDenied = micPermissionState === "denied" || isMicBlockedMessage(micError);
+  const micStatusText = isMicDenied ? "Microphone blocked" : micError ? compactMicError(micError) : "";
+
+  const handleMicFix = () => {
+    if (typeof window === "undefined") return;
+    window.alert("Enable microphone in browser: Site Settings -> Microphone -> Allow.");
+  };
 
   return (
     <>
-      <div className="px-global-chat-trigger-wrap fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-4 z-[70] sm:right-6 md:bottom-6">
+      <div className="px-global-chat-trigger-wrap z-[70]">
         <div className="group relative">
           <button
             type="button"
             onClick={() => setIsOpen((prev) => !prev)}
-            className="px-global-chat-trigger px-ai-fab relative grid h-14 w-14 place-items-center rounded-full border border-cyan-300/50 bg-slate-900/75 text-cyan-100 shadow-[0_0_30px_rgba(34,211,238,0.28)] backdrop-blur-xl transition duration-300 hover:scale-[1.03] hover:shadow-[0_0_40px_rgba(34,211,238,0.34)] focus:outline-none focus:ring-2 focus:ring-cyan-300/55"
+            className="px-global-chat-trigger px-ai-fab floating-ai-btn relative grid h-14 w-14 place-items-center rounded-full border border-cyan-300/50 bg-slate-900/75 text-cyan-100 shadow-[0_0_30px_rgba(34,211,238,0.28)] backdrop-blur-xl transition duration-300 hover:scale-[1.03] hover:shadow-[0_0_40px_rgba(34,211,238,0.34)] focus:outline-none focus:ring-2 focus:ring-cyan-300/55"
             aria-label={personalizedLabel}
           >
             <span className="absolute inset-0 rounded-full border border-cyan-300/35 animate-pulse" />
@@ -577,7 +627,7 @@ export function GlobalChatbot() {
         )}
         aria-hidden={!isOpen}
       >
-        <div className="px-global-chat-panel relative flex h-full w-full flex-col overflow-hidden rounded-3xl border border-cyan-300/35 bg-gradient-to-b from-slate-900/90 via-slate-900/80 to-blue-950/70 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_24px_80px_rgba(2,6,23,0.65)] backdrop-blur-2xl">
+        <div className="px-global-chat-panel chat-panel relative flex h-full w-full flex-col overflow-hidden rounded-3xl border border-cyan-300/35 bg-gradient-to-b from-slate-900/90 via-slate-900/80 to-blue-950/70 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_24px_80px_rgba(2,6,23,0.65)] backdrop-blur-2xl">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(34,211,238,0.2),transparent_44%),radial-gradient(circle_at_92%_0%,rgba(59,130,246,0.14),transparent_36%)]" />
 
           <header className="relative z-10 border-b border-cyan-200/15 px-4 py-3">
@@ -627,7 +677,7 @@ export function GlobalChatbot() {
                 <div key={message.id} className={cn("px-chat-message flex w-full animate-fade-slide", isUser ? "justify-end" : "justify-start")}>
                   <div
                     className={cn(
-                      "px-chat-bubble px-ai-message max-w-[88%] rounded-2xl border px-3 py-2 text-sm",
+                      "px-chat-bubble chat-bubble px-ai-message max-w-[88%] rounded-2xl border px-3 py-2 text-sm",
                       isUser
                         ? "px-chat-bubble-user border-slate-500/30 bg-slate-900/75 text-slate-100"
                         : "px-chat-bubble-ai border-cyan-300/35 bg-cyan-400/10 text-cyan-50 shadow-[0_0_20px_rgba(34,211,238,0.14)]"
@@ -670,14 +720,17 @@ export function GlobalChatbot() {
             ) : null}
           </div>
 
-          <div className="relative z-10 border-t border-cyan-200/15 p-3">
+          <div className="chat-input-bar relative z-10 border-t border-cyan-200/15 p-3">
             <ChatInput
               value={input}
               onChange={setInput}
               onSubmit={sendMessage}
               disabled={typing}
               placeholder="Ask anything about posture, plans, or progress..."
-              onError={(message) => setMicError(message)}
+              onError={(message) => {
+                setMicError(message);
+                void syncMicPermissionState();
+              }}
               leading={
                 <VoiceToggle
                   enabled={voiceEnabled}
@@ -701,7 +754,16 @@ export function GlobalChatbot() {
                 />
               }
             />
-            {micError ? <p className="mt-2 text-[11px] text-amber-200/90">{compactMicError(micError)}</p> : null}
+            {micStatusText ? (
+              <div className="mt-2 flex items-center text-[11px]">
+                <p className={cn(isMicDenied ? "font-medium text-rose-300" : "text-amber-200/90")}>{micStatusText}</p>
+                {isMicDenied ? (
+                  <button id="micFixBtn" type="button" className="mic-fix-btn" onClick={handleMicFix}>
+                    Enable
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
       </aside>
