@@ -7,11 +7,13 @@ type ProviderHandlers = {
   stream: (prompt: string) => AsyncIterable<string>;
 };
 
-const notConfigured = (provider: Exclude<AIProvider, "puter">) => async (_prompt: string): Promise<string> => {
+const notConfigured = (provider: Exclude<AIProvider, "puter">) => async (prompt: string): Promise<string> => {
+  void prompt;
   throw new Error(`${provider} provider is not configured in this client build.`);
 };
 
-const notConfiguredStream = (provider: Exclude<AIProvider, "puter">) => async function* (_prompt: string): AsyncGenerator<string> {
+const notConfiguredStream = (provider: Exclude<AIProvider, "puter">) => async function* (prompt: string): AsyncGenerator<string> {
+  void prompt;
   throw new Error(`${provider} streaming is not configured in this client build.`);
 };
 
@@ -48,4 +50,3 @@ export async function aiChat(prompt: string, provider: AIProvider): Promise<stri
 export function aiStream(prompt: string, provider: AIProvider): AsyncIterable<string> {
   return handlers[provider].stream(prompt);
 }
-
