@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import dynamic from "next/dynamic";
+import Script from "next/script";
 import { AuthHashRouter } from "@/components/AuthHashRouter";
 import DevServiceWorkerReset from "@/components/DevServiceWorkerReset";
 import { DailyReminderScheduler } from "@/components/DailyReminderScheduler";
@@ -66,6 +67,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="antialiased">
+        <Script src="https://js.puter.com/v2/" strategy="afterInteractive" />
         <ThemeController />
         <ThemeLoader />
         <PXPersonalizationController />

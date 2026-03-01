@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Lunar Lander - Mobile</title>
+  <style>
+    :root {
+      --bg-top: #070b18;
+      --bg-bottom: #101a2c;
+      --ui: rgba(255, 255, 255, 0.1);
+      --ui-border: rgba(255, 255, 255, 0.2);
+      --text: #e2e8f0;
+      --accent: #22d3ee;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --success: #22c55e;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at 20% 10%, #1e293b 0%, transparent 35%),
+        linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+      color: var(--text);
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      touch-action: none;
+    }
+
+    #game {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    .hud {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: env(safe-area-inset-top) 12px 10px;
+      pointer-events: none;
+    }
+
+    .hud-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      background: rgba(2, 6, 23, 0.35);
+      border: 1px solid var(--ui-border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      backdrop-filter: blur(4px);
+    }
+
+    .hud-label {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+
+    .value {
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .fuel-wrap {
+      min-width: 46%;
+    }
+
+    .fuel-bar {
+      width: 100%;
+      height: 10px;
+      border-radius: 99px;
+      background: #0f172a;
+      border: 1px solid var(--ui-border);
+      overflow: hidden;
+    }
+
+    .fuel-fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #22c55e, #14b8a6);
+      transition: width 0.06s linear;
+    }
+
+    .message {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+      font-weight: 900;
+      font-size: clamp(1.8rem, 8vw, 3.5rem);
+      letter-spacing: 0.08em;
+      text-shadow: 0 0 14px rgba(255, 255, 255, 0.25);
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .message.show {
+      opacity: 1;
+    }
+
+    .message.success {
+      color: var(--success);
+    }
+
+    .message.crash {
+      color: var(--danger);
+    }
+
+    .controls {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 10px 10px calc(env(safe-area-inset-bottom) + 10px);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .rl-note {
+      position: fixed;
+      left: 10px;
+      right: 10px;
+      bottom: calc(env(safe-area-inset-bottom) + 156px);
+      max-height: 130px;
+      overflow: auto;
+      border-radius: 12px;
+      border: 1px solid var(--ui-border);
+      background: rgba(15, 23, 42, 0.55);
+      padding: 8px 10px;
+      font-size: 11px;
+      color: #cbd5e1;
+      backdrop-filter: blur(4px);
+    }
+
+    .rl-note p {
+      margin: 0 0 4px;
+    }
+
+    .rl-note details {
+      margin-top: 5px;
+    }
+
+    .rl-note summary {
+      cursor: pointer;
+      color: #67e8f9;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .rl-note pre {
+      margin: 4px 0 0;
+      max-height: 120px;
+      overflow: auto;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 8px;
+      background: rgba(2, 6, 23, 0.65);
+      padding: 6px;
+      color: #bae6fd;
+      font-size: 10px;
+      line-height: 1.35;
+      white-space: pre;
+    }
+
+    .panel {
+      min-height: 120px;
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid var(--ui-border);
+      border-radius: 14px;
+      display: grid;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    .lr {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .btn {
+      display: grid;
+      place-items: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.02);
+      border: 0;
+      border-right: 1px solid var(--ui-border);
+    }
+
+    .btn:last-child {
+      border-right: 0;
+    }
+
+    .btn.thrust {
+      border-right: 0;
+      color: #fef3c7;
+      background: rgba(245, 158, 11, 0.1);
+    }
+
+    .btn.active {
+      background: rgba(34, 211, 238, 0.2);
+      box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.35);
+    }
+
+    .btn.thrust.active {
+      background: rgba(245, 158, 11, 0.28);
+      box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.45);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div class="hud">
+    <div class="hud-row">
+      <div class="fuel-wrap">
+        <div class="hud-label">Fuel</div>
+        <div class="fuel-bar">
+          <div id="fuelFill" class="fuel-fill"></div>
+        </div>
+      </div>
+      <div>
+        <div class="hud-label">Speed</div>
+        <div id="speedValue" class="value">0.00</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="message" class="message"></div>
+
+  <div class="rl-note">
+    <p><strong>RL / DQN Note:</strong> Lunar Lander AI is commonly trained with Deep Q-Networks (DQN).</p>
+    <p>Key pieces: experience replay, target network, epsilon-greedy exploration.</p>
+    <p>Solve target: average score 200+ across 100 consecutive episodes.</p>
+    <details>
+      <summary>DQN Snippet</summary>
+      <pre>import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class QNetwork(nn.Module):
+    def __init__(self, state_size, action_size, seed):
+        super(QNetwork, self).__init__()
+        self.seed = torch.manual_seed(seed)
+        self.fc1 = nn.Linear(state_size, 64)
+        self.fc2 = nn.Linear(64, 64)
+        self.fc3 = nn.Linear(64, action_size)
+
+    def forward(self, state):
+        x = F.relu(self.fc1(state))
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)</pre>
+    </details>
+    <details>
+      <summary>Linear Regression Snippet</summary>
+      <pre>from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+import numpy as np
+import pandas as pd
+
+X = np.array([[1,1],[1,2],[2,2],[2,3],[3,3],[3,4]])
+y = np.dot(X, np.array([1,2])) + 3
+X = pd.DataFrame(X, columns=["size","num_bedrooms"])
+y = pd.Series(y, name="price")
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+model = LinearRegression()
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+print(mean_squared_error(y_test, y_pred))</pre>
+    </details>
+    <details>
+      <summary>KNN + Q-Learning Snippets</summary>
+      <pre>from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score
+
+iris = load_iris()
+X, y = iris.data, iris.target
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+knn = KNeighborsClassifier(n_neighbors=3)
+knn.fit(X_train, y_train)
+print(accuracy_score(y_test, knn.predict(X_test)))
+
+import numpy as np
+Q = np.zeros((16,4))
+alpha, gamma, eps = 0.1, 0.9, 0.1
+for _ in range(1000):
+    s = np.random.randint(0,16)
+    while True:
+        a = np.random.randint(0,4) if np.random.rand() &lt; eps else np.argmax(Q[s])
+        ns = (s + 1) % 16
+        r = 1 if ns == 15 else 0
+        Q[s,a] += alpha * (r + gamma * np.max(Q[ns]) - Q[s,a])
+        s = ns
+        if s == 15:
+            break</pre>
+    </details>
+  </div>
+
+  <div class="controls">
+    <div class="panel lr">
+      <button id="leftBtn" class="btn" aria-label="Move Left">LEFT</button>
+      <button id="rightBtn" class="btn" aria-label="Move Right">RIGHT</button>
+    </div>
+    <div class="panel">
+      <button id="thrustBtn" class="btn thrust" aria-label="Thrust">THRUST</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const fuelFill = document.getElementById("fuelFill");
+    const speedValue = document.getElementById("speedValue");
+    const message = document.getElementById("message");
+
+    const leftBtn = document.getElementById("leftBtn");
+    const rightBtn = document.getElementById("rightBtn");
+    const thrustBtn = document.getElementById("thrustBtn");
+
+    const WORLD = {
+      gravity: 0.038,
+      sideAccel: 0.03,
+      thrustAccel: 0.075,
+      padWidthRatio: 0.16
+    };
+
+    let lander = null;
+    let terrainPoints = [];
+    let pad = null;
+    let particles = [];
+    let state = "playing"; // playing | crashed | success
+    let lastTs = 0;
+
+    const controls = {
+      left: false,
+      right: false,
+      thrust: false
+    };
+
+    function resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.floor(window.innerWidth * dpr);
+      canvas.height = Math.floor(window.innerHeight * dpr);
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      buildTerrain();
+      resetGame();
+    }
+
+    function randomRange(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    function buildTerrain() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const groundTop = h * 0.72;
+      const segments = 16;
+      const step = w / segments;
+
+      const padW = w * WORLD.padWidthRatio;
+      const padX = randomRange(w * 0.2, w * 0.8 - padW);
+      const padY = randomRange(h * 0.76, h * 0.86);
+
+      pad = { x: padX, y: padY, w: padW };
+      terrainPoints = [];
+
+      for (let i = 0; i <= segments; i++) {
+        const x = i * step;
+        const inPad = x >= pad.x && x <= pad.x + pad.w;
+        const y = inPad ? pad.y : randomRange(groundTop, h * 0.93);
+        terrainPoints.push({ x, y });
+      }
+
+      terrainPoints = terrainPoints.map((p, idx) => {
+        if (p.x >= pad.x && p.x <= pad.x + pad.w) return { x: p.x, y: pad.y };
+        if (idx > 0 && terrainPoints[idx - 1].x < pad.x && p.x > pad.x) return { x: p.x, y: Math.min(p.y, pad.y - 45) };
+        if (idx > 0 && terrainPoints[idx - 1].x < pad.x + pad.w && p.x > pad.x + pad.w) return { x: p.x, y: Math.min(p.y, pad.y - 45) };
+        return p;
+      });
+    }
+
+    function groundYAt(x) {
+      for (let i = 0; i < terrainPoints.length - 1; i++) {
+        const a = terrainPoints[i];
+        const b = terrainPoints[i + 1];
+        if (x >= a.x && x <= b.x) {
+          const t = (x - a.x) / (b.x - a.x || 1);
+          return a.y + (b.y - a.y) * t;
+        }
+      }
+      return window.innerHeight;
+    }
+
+    function resetGame() {
+      lander = {
+        x: window.innerWidth * 0.15,
+        y: window.innerHeight * 0.2,
+        vx: 0.35,
+        vy: 0,
+        angle: 0,
+        fuel: 100
+      };
+      controls.left = false;
+      controls.right = false;
+      controls.thrust = false;
+      particles = [];
+      state = "playing";
+      showMessage("", "");
+      updateHUD();
+    }
+
+    function showMessage(text, mode) {
+      message.textContent = text;
+      message.className = "message";
+      if (text) {
+        message.classList.add("show");
+        if (mode) message.classList.add(mode);
+      }
+    }
+
+    function updateHUD() {
+      const speed = Math.hypot(lander.vx, lander.vy);
+      speedValue.textContent = speed.toFixed(2);
+      fuelFill.style.width = `${Math.max(0, lander.fuel)}%`;
+      fuelFill.style.background = lander.fuel > 35
+        ? "linear-gradient(90deg,#22c55e,#14b8a6)"
+        : lander.fuel > 15
+          ? "linear-gradient(90deg,#f59e0b,#f97316)"
+          : "linear-gradient(90deg,#ef4444,#b91c1c)";
+    }
+
+    function setButtonState(button, on) {
+      button.classList.toggle("active", on);
+    }
+
+    function attachHoldControl(button, key) {
+      const start = (e) => {
+        e.preventDefault();
+        controls[key] = true;
+        setButtonState(button, true);
+      };
+      const end = (e) => {
+        e.preventDefault();
+        controls[key] = false;
+        setButtonState(button, false);
+      };
+
+      button.addEventListener("pointerdown", start);
+      button.addEventListener("pointerup", end);
+      button.addEventListener("pointercancel", end);
+      button.addEventListener("pointerleave", end);
+    }
+
+    function keyboardControl(on, code) {
+      if (code === "ArrowLeft") controls.left = on;
+      if (code === "ArrowRight") controls.right = on;
+      if (code === "ArrowUp" || code === "Space") controls.thrust = on;
+      setButtonState(leftBtn, controls.left);
+      setButtonState(rightBtn, controls.right);
+      setButtonState(thrustBtn, controls.thrust);
+    }
+
+    function createCrashParticles(x, y) {
+      particles = [];
+      for (let i = 0; i < 42; i++) {
+        const speed = randomRange(1.2, 4.2);
+        const angle = randomRange(0, Math.PI * 2);
+        particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 1.2,
+          life: randomRange(0.6, 1.2),
+          radius: randomRange(1.5, 4.5)
+        });
+      }
+    }
+
+    function updateCrashParticles(dtScale) {
+      particles.forEach((p) => {
+        p.x += p.vx * dtScale;
+        p.y += p.vy * dtScale;
+        p.vy += 0.07 * dtScale;
+        p.life -= 0.015 * dtScale;
+      });
+      particles = particles.filter((p) => p.life > 0);
+    }
+
+    function drawCrashParticles() {
+      particles.forEach((p) => {
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.life > 0.45 ? "#fde68a" : "#ef4444";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+    }
+
+    function updatePhysics(dtScale) {
+      if (state !== "playing") return;
+
+      if (controls.left) {
+        lander.vx -= WORLD.sideAccel * dtScale;
+        lander.angle = Math.max(lander.angle - 0.025 * dtScale, -0.45);
+      }
+      if (controls.right) {
+        lander.vx += WORLD.sideAccel * dtScale;
+        lander.angle = Math.min(lander.angle + 0.025 * dtScale, 0.45);
+      }
+      if (!controls.left && !controls.right) {
+        lander.angle *= (1 - 0.12 * dtScale);
+      }
+
+      if (controls.thrust && lander.fuel > 0) {
+        const thrust = WORLD.thrustAccel * dtScale;
+        lander.vy -= thrust * Math.cos(lander.angle);
+        lander.vx += thrust * Math.sin(lander.angle) * 0.65;
+        lander.fuel -= 0.16 * dtScale;
+      }
+
+      lander.vy += WORLD.gravity * dtScale;
+      lander.vx *= (1 - 0.0028 * dtScale);
+      lander.vy *= (1 - 0.0018 * dtScale);
+
+      lander.x += lander.vx * dtScale;
+      lander.y += lander.vy * dtScale;
+
+      if (lander.x < 0) {
+        lander.x = 0;
+        lander.vx *= -0.35;
+      }
+      if (lander.x > window.innerWidth) {
+        lander.x = window.innerWidth;
+        lander.vx *= -0.35;
+      }
+
+      const landingY = groundYAt(lander.x);
+      const landerBottom = lander.y + 14;
+      if (landerBottom >= landingY) {
+        const speed = Math.hypot(lander.vx, lander.vy);
+        const onPad = lander.x >= pad.x && lander.x <= pad.x + pad.w;
+        const softEnough = speed <= 2.0;
+        const stable = Math.abs(lander.angle) < 0.25;
+
+        lander.y = landingY - 14;
+
+        if (onPad && softEnough && stable) {
+          state = "success";
+          lander.vx = 0;
+          lander.vy = 0;
+          showMessage("MISSION SUCCESS", "success");
+          setTimeout(resetGame, 2200);
+        } else {
+          state = "crashed";
+          createCrashParticles(lander.x, landingY - 6);
+          showMessage("CRASH", "crash");
+          setTimeout(resetGame, 2100);
+        }
+      }
+
+      updateHUD();
+    }
+
+    function drawBackgroundStars() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      ctx.fillStyle = "#ffffff";
+      for (let i = 0; i < 40; i++) {
+        const x = (i * 197) % w;
+        const y = (i * 151) % (h * 0.65);
+        const r = (i % 3 === 0) ? 1.5 : 1;
+        ctx.globalAlpha = 0.18 + (i % 4) * 0.16;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function drawTerrain() {
+      const h = window.innerHeight;
+      ctx.beginPath();
+      ctx.moveTo(terrainPoints[0].x, terrainPoints[0].y);
+      for (let i = 1; i < terrainPoints.length; i++) {
+        ctx.lineTo(terrainPoints[i].x, terrainPoints[i].y);
+      }
+      ctx.lineTo(window.innerWidth, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fillStyle = "#1f2937";
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(terrainPoints[0].x, terrainPoints[0].y);
+      for (let i = 1; i < terrainPoints.length; i++) {
+        ctx.lineTo(terrainPoints[i].x, terrainPoints[i].y);
+      }
+      ctx.strokeStyle = "#94a3b8";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = "#22d3ee";
+      ctx.fillRect(pad.x, pad.y - 3, pad.w, 6);
+    }
+
+    function drawLander() {
+      if (state === "crashed") return;
+
+      ctx.save();
+      ctx.translate(lander.x, lander.y);
+      ctx.rotate(lander.angle);
+
+      ctx.strokeStyle = "#e2e8f0";
+      ctx.fillStyle = "rgba(226,232,240,0.08)";
+      ctx.lineWidth = 2;
+
+      ctx.beginPath();
+      ctx.moveTo(-10, -8);
+      ctx.lineTo(10, -8);
+      ctx.lineTo(12, 2);
+      ctx.lineTo(-12, 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(-14, 2);
+      ctx.lineTo(-8, 12);
+      ctx.moveTo(14, 2);
+      ctx.lineTo(8, 12);
+      ctx.moveTo(-8, 12);
+      ctx.lineTo(8, 12);
+      ctx.stroke();
+
+      if (controls.thrust && lander.fuel > 0 && state === "playing") {
+        ctx.beginPath();
+        ctx.moveTo(-4, 2);
+        ctx.lineTo(0, randomRange(16, 24));
+        ctx.lineTo(4, 2);
+        ctx.closePath();
+        ctx.fillStyle = "#f59e0b";
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      drawBackgroundStars();
+      drawTerrain();
+      drawLander();
+      if (state === "crashed") drawCrashParticles();
+    }
+
+    function loop(ts) {
+      if (!lastTs) lastTs = ts;
+      const dt = Math.min(34, ts - lastTs);
+      lastTs = ts;
+      const dtScale = dt / 16.6667;
+
+      updatePhysics(dtScale);
+      updateCrashParticles(dtScale);
+      render();
+      requestAnimationFrame(loop);
+    }
+
+    attachHoldControl(leftBtn, "left");
+    attachHoldControl(rightBtn, "right");
+    attachHoldControl(thrustBtn, "thrust");
+
+    window.addEventListener("keydown", (e) => {
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "Space"].includes(e.code)) {
+        e.preventDefault();
+        keyboardControl(true, e.code);
+      }
+    });
+    window.addEventListener("keyup", (e) => {
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "Space"].includes(e.code)) {
+        e.preventDefault();
+        keyboardControl(false, e.code);
+      }
+    });
+
+    window.addEventListener("resize", resizeCanvas);
+
+    resizeCanvas();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

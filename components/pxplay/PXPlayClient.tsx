@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Brain, Brackets, CircleDot, Gamepad2, Grid3X3, Layers, Maximize2, Minimize2, Rocket, Volume2, VolumeX, X } from "lucide-react";
+import GameModelSuggestion from "@/components/games/GameModelSuggestion";
 
 type GameId = "snake" | "lander" | "xo" | "pong" | "breakout" | "memory";
 
@@ -23,7 +24,70 @@ const TILES: Tile[] = [
 ];
 const MEMORY_SYMBOLS = ["PX", "AI", "UX", "RX", "GO", "VR"] as const;
 
-const MAX_DPR = 2;
+const MAX_DPR = 3;
+const TOUCH_BTN_BASE =
+  "rounded-xl border border-cyan-300/45 bg-cyan-400/10 py-3 text-sm font-semibold text-cyan-100 backdrop-blur-md active:bg-cyan-400/25";
+const TOUCH_BTN_SUBTLE =
+  "rounded-xl border border-cyan-300/45 bg-slate-900/35 py-3 text-sm font-semibold text-cyan-100 backdrop-blur-md active:bg-cyan-400/20";
+const TOUCH_ACTION_BTN =
+  "rounded-xl border border-cyan-300/45 bg-cyan-400/12 px-4 py-2 text-sm text-cyan-100 backdrop-blur-md active:bg-cyan-400/24";
+
+type LinearDifficultyStats = {
+  wins: number;
+  failures: number;
+  avgWinSeconds: number;
+};
+
+type LinearDifficultyLearner = {
+  weights: [number, number, number, number, number];
+  lr: number;
+};
+
+function clampNumber(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function createLinearDifficultyLearner(): LinearDifficultyLearner {
+  return {
+    // bias, level, success-rate, speed, failure-rate
+    weights: [1.0, 0.26, 0.42, 0.34, -0.2],
+    lr: 0.08
+  };
+}
+
+function difficultyFeatures(level: number, stats: LinearDifficultyStats): [number, number, number, number, number] {
+  const total = Math.max(1, stats.wins + stats.failures);
+  const successRate = stats.wins / total;
+  const failureRate = stats.failures / total;
+  const levelNorm = clampNumber(level / 20, 0, 1);
+  const speedScore = clampNumber((28 - stats.avgWinSeconds) / 28, 0, 1);
+  return [1, levelNorm, successRate, speedScore, failureRate];
+}
+
+function predictDifficulty(learner: LinearDifficultyLearner, level: number, stats: LinearDifficultyStats) {
+  const x = difficultyFeatures(level, stats);
+  const raw = learner.weights.reduce((sum, w, idx) => sum + w * x[idx], 0);
+  return clampNumber(raw, 0.85, 2.4);
+}
+
+function trainDifficultyModel(
+  learner: LinearDifficultyLearner,
+  level: number,
+  stats: LinearDifficultyStats,
+  outcome: "win" | "fail"
+) {
+  const x = difficultyFeatures(level, stats);
+  const prediction = predictDifficulty(learner, level, stats);
+  const speedScore = x[3];
+  const baseTarget = clampNumber(1 + level * 0.05, 0.95, 2.2);
+  const target = outcome === "win"
+    ? clampNumber(baseTarget + 0.1 + speedScore * 0.35, 0.95, 2.3)
+    : clampNumber(baseTarget - 0.24, 0.85, 2.1);
+
+  const error = target - prediction;
+  learner.weights = learner.weights.map((w, idx) => (w + learner.lr * error * x[idx])) as LinearDifficultyLearner["weights"];
+  return predictDifficulty(learner, level, stats);
+}
 
 function useAnimationFrame(loop: (dt: number) => void, enabled: boolean) {
   const rafRef = useRef<number | null>(null);
@@ -66,9 +130,11 @@ function useCanvasResize(containerRef: React.RefObject<HTMLDivElement>, canvasRe
     resize();
     const obs = new ResizeObserver(resize);
     obs.observe(container);
+    window.addEventListener("resize", resize);
     window.addEventListener("orientationchange", resize);
     return () => {
       obs.disconnect();
+      window.removeEventListener("resize", resize);
       window.removeEventListener("orientationchange", resize);
     };
   }, [containerRef, canvasRef]);
@@ -84,8 +150,14 @@ function GameShell({ title, subtitle, onExit, children, footer }: { title: strin
         </div>
         <button type="button" onClick={onExit} className="rounded-md border border-cyan-300/45 bg-slate-900/70 px-3 py-1 text-xs text-cyan-100">Exit</button>
       </header>
-      <div className="min-h-0 flex-1">{children}</div>
-      {footer ? <div className="border-t border-cyan-400/20 bg-black/40 p-3 pb-[env(safe-area-inset-bottom)]">{footer}</div> : null}
+      <div className="relative min-h-0 flex-1">
+        {children}
+        {footer ? (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 p-3 pb-[env(safe-area-inset-bottom)]">
+            <div className="pointer-events-auto rounded-2xl border border-cyan-300/25 bg-slate-900/25 p-2 backdrop-blur-xl">{footer}</div>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -332,10 +404,13 @@ function SnakeGame({ onExit }: { onExit: () => void }) {
           />
         </div>
       </div>
-      <div className="border-t border-[#3f7026] bg-[#4d8430] p-3 pb-[env(safe-area-inset-bottom)]">
-        <button type="button" onClick={restart} className="w-full rounded-lg border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold text-white">
+      <div className="absolute inset-x-0 bottom-0 z-20 p-3 pb-[env(safe-area-inset-bottom)]">
+        <button type="button" onClick={restart} className="w-full rounded-lg border border-cyan-300/45 bg-cyan-400/12 px-4 py-2 text-sm font-semibold text-cyan-100 backdrop-blur-md active:bg-cyan-400/24">
           Restart
         </button>
+        <div className="mt-2">
+          <GameModelSuggestion game="snake" compact />
+        </div>
       </div>
     </div>
   );
@@ -351,6 +426,11 @@ function LanderGame({ onExit }: { onExit: () => void }) {
   const padRef = useRef({ x: 0, w: 90, y: 0 });
   const [fuel, setFuel] = useState(320);
   const [state, setState] = useState<"running" | "won" | "crashed">("running");
+  const [level, setLevel] = useState(1);
+  const levelStartedAtRef = useRef<number>(Date.now());
+  const diffStatsRef = useRef<LinearDifficultyStats>({ wins: 0, failures: 0, avgWinSeconds: 20 });
+  const learnerRef = useRef<LinearDifficultyLearner>(createLinearDifficultyLearner());
+  const difficultyScaleRef = useRef<number>(1);
 
   useCanvasResize(containerRef, canvasRef);
 
@@ -376,9 +456,42 @@ function LanderGame({ onExit }: { onExit: () => void }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     shipRef.current = { x: canvas.width * 0.2, y: canvas.height * 0.2, vx: 0, vy: 0, a: 0 };
+    setLevel(1);
+    levelStartedAtRef.current = Date.now();
+    diffStatsRef.current = { wins: 0, failures: 0, avgWinSeconds: 20 };
+    learnerRef.current = createLinearDifficultyLearner();
+    difficultyScaleRef.current = 1;
     setFuel(320);
     setState("running");
     regenerate(canvas.width, canvas.height);
+  }, [regenerate]);
+
+  const registerOutcome = useCallback((outcome: "win" | "fail", atLevel: number) => {
+    const elapsed = Math.max(3, (Date.now() - levelStartedAtRef.current) / 1000);
+    const stats = diffStatsRef.current;
+    if (outcome === "win") {
+      const nextWins = stats.wins + 1;
+      stats.avgWinSeconds = (stats.avgWinSeconds * stats.wins + elapsed) / Math.max(1, nextWins);
+      stats.wins = nextWins;
+    } else {
+      stats.failures += 1;
+    }
+    difficultyScaleRef.current = trainDifficultyModel(learnerRef.current, atLevel, stats, outcome);
+  }, []);
+
+  const nextLevel = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const difficulty = difficultyScaleRef.current;
+    setLevel((prev) => {
+      const upcoming = prev + 1;
+      regenerate(canvas.width, canvas.height);
+      shipRef.current = { x: canvas.width * 0.2, y: canvas.height * 0.2, vx: 0, vy: 0, a: 0 };
+      setFuel(Math.max(140, Math.round(320 - (upcoming - 1) * (10 + difficulty * 6))));
+      setState("running");
+      levelStartedAtRef.current = Date.now();
+      return upcoming;
+    });
   }, [regenerate]);
 
   useEffect(() => { restart(); }, [restart]);
@@ -429,23 +542,31 @@ function LanderGame({ onExit }: { onExit: () => void }) {
     if (!terrainRef.current.length) regenerate(w, h);
 
     if (state === "running") {
-      if (leftRef.current) shipRef.current.a -= 1.8 * dt;
-      if (rightRef.current) shipRef.current.a += 1.8 * dt;
+      const difficulty = difficultyScaleRef.current;
+      const turnSpeed = 1.8 + (level - 1) * 0.08 * difficulty;
+      const thrustPower = Math.max(125, 180 - (level - 1) * (4 + difficulty * 2.5));
+      const gravity = 54 + (level - 1) * (2.2 + difficulty * 1.6);
+      if (leftRef.current) shipRef.current.a -= turnSpeed * dt;
+      if (rightRef.current) shipRef.current.a += turnSpeed * dt;
       let thrust = 0;
       if (thrustRef.current && fuel > 0) {
-        thrust = 180;
+        thrust = thrustPower;
         setFuel((f) => Math.max(0, f - 22 * dt));
       }
       shipRef.current.vx += Math.sin(shipRef.current.a) * thrust * dt;
-      shipRef.current.vy += (54 - Math.cos(shipRef.current.a) * thrust) * dt;
+      shipRef.current.vy += (gravity - Math.cos(shipRef.current.a) * thrust) * dt;
       shipRef.current.x += shipRef.current.vx * dt;
       shipRef.current.y += shipRef.current.vy * dt;
       shipRef.current.x = Math.max(10, Math.min(w - 10, shipRef.current.x));
       const groundY = terrainY(shipRef.current.x);
       if (shipRef.current.y >= groundY - 6) {
         const onPad = shipRef.current.x >= padRef.current.x && shipRef.current.x <= padRef.current.x + padRef.current.w;
-        const safe = Math.abs(shipRef.current.vx) <= 20 && Math.abs(shipRef.current.vy) <= 28 && Math.abs(shipRef.current.a) <= 0.22;
+        const safeVX = Math.max(8, 20 - (level - 1) * (0.9 + difficulty * 0.45));
+        const safeVY = Math.max(12, 28 - (level - 1) * (1.1 + difficulty * 0.55));
+        const safeAngle = Math.max(0.1, 0.22 - (level - 1) * (0.008 + difficulty * 0.004));
+        const safe = Math.abs(shipRef.current.vx) <= safeVX && Math.abs(shipRef.current.vy) <= safeVY && Math.abs(shipRef.current.a) <= safeAngle;
         setState(onPad && safe ? "won" : "crashed");
+        registerOutcome(onPad && safe ? "win" : "fail", level);
         shipRef.current.y = groundY - 6;
         shipRef.current.vx = 0;
         shipRef.current.vy = 0;
@@ -491,18 +612,41 @@ function LanderGame({ onExit }: { onExit: () => void }) {
     ctx.fillStyle = "#f8fafc";
     ctx.font = "600 18px ui-monospace, Menlo, Consolas, monospace";
     ctx.fillText(`Fuel ${Math.round(fuel)}`, 14, 24);
+    ctx.fillText(`Level ${level}`, 14, 46);
+    ctx.fillText(`Diff x${difficultyScaleRef.current.toFixed(2)}`, 14, 68);
     if (state !== "running") {
       ctx.fillStyle = "rgba(0,0,0,0.45)";
       ctx.fillRect(w * 0.22, h * 0.2, w * 0.56, 90);
       ctx.fillStyle = state === "won" ? "#86efac" : "#fda4af";
       ctx.font = "bold 28px ui-sans-serif, system-ui";
       ctx.textAlign = "center";
-      ctx.fillText(state === "won" ? "Safe Landing" : "Crash", w / 2, h * 0.28);
+      ctx.fillText(state === "won" ? "LEVEL CLEAR" : "Crash", w / 2, h * 0.28);
+      if (state === "won") {
+        ctx.font = "600 14px ui-sans-serif, system-ui";
+        ctx.fillText("Game paused - press Next Level", w / 2, h * 0.33);
+      }
     }
   }, true);
 
   return (
-    <GameShell title="Lunar Lander" subtitle="Hold left / thrust / right" onExit={onExit} footer={<div className="grid grid-cols-4 gap-2"><button type="button" onTouchStart={() => { leftRef.current = true; }} onTouchEnd={() => { leftRef.current = false; }} onTouchCancel={() => { leftRef.current = false; }} className="rounded-xl border border-cyan-300/40 bg-slate-900/70 py-2 text-sm">Left</button><button type="button" onTouchStart={() => { thrustRef.current = true; }} onTouchEnd={() => { thrustRef.current = false; }} onTouchCancel={() => { thrustRef.current = false; }} className="rounded-xl border border-cyan-300/40 bg-cyan-400/15 py-2 text-sm">Thrust</button><button type="button" onTouchStart={() => { rightRef.current = true; }} onTouchEnd={() => { rightRef.current = false; }} onTouchCancel={() => { rightRef.current = false; }} className="rounded-xl border border-cyan-300/40 bg-slate-900/70 py-2 text-sm">Right</button><button type="button" onClick={restart} className="rounded-xl border border-cyan-300/40 bg-cyan-400/10 py-2 text-sm">Restart</button></div>}>
+    <GameShell
+      title="Lunar Lander"
+      subtitle="Hold left / thrust / right"
+      onExit={onExit}
+      footer={
+        <div className="space-y-2">
+          <div className="grid grid-cols-4 gap-2">
+            <button type="button" onTouchStart={() => { leftRef.current = true; }} onTouchEnd={() => { leftRef.current = false; }} onTouchCancel={() => { leftRef.current = false; }} className={TOUCH_BTN_SUBTLE}>Left</button>
+            <button type="button" onTouchStart={() => { thrustRef.current = true; }} onTouchEnd={() => { thrustRef.current = false; }} onTouchCancel={() => { thrustRef.current = false; }} className={TOUCH_BTN_BASE}>Thrust</button>
+            <button type="button" onTouchStart={() => { rightRef.current = true; }} onTouchEnd={() => { rightRef.current = false; }} onTouchCancel={() => { rightRef.current = false; }} className={TOUCH_BTN_SUBTLE}>Right</button>
+            <button type="button" onClick={state === "won" ? nextLevel : restart} className={TOUCH_BTN_BASE}>
+              {state === "won" ? "Next Level" : "Restart"}
+            </button>
+          </div>
+          <GameModelSuggestion game="lander" compact />
+        </div>
+      }
+    >
       <div ref={containerRef} className="h-full w-full"><canvas ref={canvasRef} className="h-full w-full" /></div>
     </GameShell>
   );
@@ -569,7 +713,20 @@ function PongGame({ onExit }: { onExit: () => void }) {
   }, true);
 
   return (
-    <GameShell title="Pong" subtitle="Drag to move paddle" onExit={onExit} footer={<div className="flex items-center gap-3"><p className="flex-1 text-sm text-cyan-100">You {score.you} - {score.ai} AI</p><button type="button" onClick={restart} className="rounded-xl border border-cyan-300/40 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100">Restart</button></div>}>
+    <GameShell
+      title="Pong"
+      subtitle="Drag to move paddle"
+      onExit={onExit}
+      footer={
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <p className="flex-1 text-sm text-cyan-100">You {score.you} - {score.ai} AI</p>
+            <button type="button" onClick={restart} className={TOUCH_ACTION_BTN}>Restart</button>
+          </div>
+          <GameModelSuggestion game="pong" compact />
+        </div>
+      }
+    >
       <div ref={containerRef} className="h-full w-full" onTouchStart={(e) => {
         const t = e.touches[0];
         if (!t) return;
@@ -601,11 +758,17 @@ function BreakoutGame({ onExit }: { onExit: () => void }) {
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [over, setOver] = useState(false);
+  const [level, setLevel] = useState(1);
+  const [awaitingNextLevel, setAwaitingNextLevel] = useState(false);
+  const levelStartedAtRef = useRef<number>(Date.now());
+  const diffStatsRef = useRef<LinearDifficultyStats>({ wins: 0, failures: 0, avgWinSeconds: 16 });
+  const learnerRef = useRef<LinearDifficultyLearner>(createLinearDifficultyLearner());
+  const difficultyScaleRef = useRef<number>(1);
 
   useCanvasResize(containerRef, canvasRef);
 
-  const spawn = useCallback((w: number) => {
-    const rows = 5;
+  const spawn = useCallback((w: number, nextLevel: number, difficulty: number) => {
+    const rows = Math.min(5 + Math.floor((nextLevel - 1) * (0.8 + difficulty * 0.45)), 9);
     const cols = 8;
     const gap = 6;
     const bw = Math.floor((w - 40 - gap * (cols - 1)) / cols);
@@ -618,14 +781,50 @@ function BreakoutGame({ onExit }: { onExit: () => void }) {
   const restart = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const firstLevel = 1;
+    setLevel(firstLevel);
+    levelStartedAtRef.current = Date.now();
+    diffStatsRef.current = { wins: 0, failures: 0, avgWinSeconds: 16 };
+    learnerRef.current = createLinearDifficultyLearner();
+    difficultyScaleRef.current = 1;
     paddleX.current = canvas.width * 0.4;
     ball.current = { x: canvas.width / 2, y: canvas.height * 0.72, vx: 180, vy: -180 };
-    spawn(canvas.width);
+    spawn(canvas.width, firstLevel, 1);
     setScore(0);
     setLives(3);
     setOver(false);
+    setAwaitingNextLevel(false);
   }, [spawn]);
   useEffect(() => { restart(); }, [restart]);
+
+  const registerOutcome = useCallback((outcome: "win" | "fail", atLevel: number) => {
+    const elapsed = Math.max(2, (Date.now() - levelStartedAtRef.current) / 1000);
+    const stats = diffStatsRef.current;
+    if (outcome === "win") {
+      const nextWins = stats.wins + 1;
+      stats.avgWinSeconds = (stats.avgWinSeconds * stats.wins + elapsed) / Math.max(1, nextWins);
+      stats.wins = nextWins;
+    } else {
+      stats.failures += 1;
+    }
+    difficultyScaleRef.current = trainDifficultyModel(learnerRef.current, atLevel, stats, outcome);
+  }, []);
+
+  const nextLevel = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const difficulty = difficultyScaleRef.current;
+    setLevel((prev) => {
+      const upcoming = prev + 1;
+      const speed = 180 + (upcoming - 1) * Math.round(10 + difficulty * 10);
+      paddleX.current = canvas.width * 0.4;
+      ball.current = { x: canvas.width / 2, y: canvas.height * 0.72, vx: speed, vy: -speed };
+      spawn(canvas.width, upcoming, difficulty);
+      setAwaitingNextLevel(false);
+      levelStartedAtRef.current = Date.now();
+      return upcoming;
+    });
+  }, [spawn]);
 
   useAnimationFrame((dt) => {
     const canvas = canvasRef.current;
@@ -638,7 +837,7 @@ function BreakoutGame({ onExit }: { onExit: () => void }) {
     const paddleH = 10;
     const paddleY = h - 26;
 
-    if (!over) {
+    if (!over && !awaitingNextLevel) {
       ball.current.x += ball.current.vx * dt;
       ball.current.y += ball.current.vy * dt;
       if (ball.current.x <= 8 || ball.current.x >= w - 8) ball.current.vx *= -1;
@@ -662,13 +861,17 @@ function BreakoutGame({ onExit }: { onExit: () => void }) {
           const next = prev - 1;
           if (next <= 0) {
             setOver(true);
+            registerOutcome("fail", level);
             return 0;
           }
           ball.current = { x: w / 2, y: h * 0.72, vx: 180, vy: -180 };
           return next;
         });
       }
-      if (!bricks.current.some((b) => b.alive)) setOver(true);
+      if (!bricks.current.some((b) => b.alive)) {
+        registerOutcome("win", level);
+        setAwaitingNextLevel(true);
+      }
     }
 
     ctx.clearRect(0, 0, w, h);
@@ -688,10 +891,38 @@ function BreakoutGame({ onExit }: { onExit: () => void }) {
     ctx.font = "600 18px ui-sans-serif, system-ui";
     ctx.fillText(`Score ${score}`, 12, 26);
     ctx.fillText(`Lives ${lives}`, 12, 50);
+    ctx.fillText(`Level ${level}`, 12, 74);
+    ctx.fillText(`Diff x${difficultyScaleRef.current.toFixed(2)}`, 12, 98);
+    if (awaitingNextLevel) {
+      ctx.fillStyle = "rgba(0,0,0,0.45)";
+      ctx.fillRect(w * 0.18, h * 0.32, w * 0.64, 96);
+      ctx.fillStyle = "#86efac";
+      ctx.font = "bold 28px ui-sans-serif, system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText("LEVEL COMPLETE", w / 2, h * 0.39);
+      ctx.font = "600 14px ui-sans-serif, system-ui";
+      ctx.fillText("Game paused - press Next Level", w / 2, h * 0.45);
+      ctx.textAlign = "start";
+    }
   }, true);
 
   return (
-    <GameShell title="Breakout" subtitle="Drag to move paddle" onExit={onExit} footer={<div className="flex items-center gap-3"><p className="flex-1 text-sm text-cyan-100">Score {score} · Lives {lives}</p><button type="button" onClick={restart} className="rounded-xl border border-cyan-300/40 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100">Restart</button></div>}>
+    <GameShell
+      title="Breakout"
+      subtitle="Drag to move paddle"
+      onExit={onExit}
+      footer={
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <p className="flex-1 text-sm text-cyan-100">Score {score} · Lives {lives} · Level {level}</p>
+            <button type="button" onClick={awaitingNextLevel ? nextLevel : restart} className={TOUCH_ACTION_BTN}>
+              {awaitingNextLevel ? "Next Level" : "Restart"}
+            </button>
+          </div>
+          <GameModelSuggestion game="breakout" compact />
+        </div>
+      }
+    >
       <div ref={containerRef} className="h-full w-full" onTouchStart={(e) => {
         const t = e.touches[0];
         if (!t) return;
@@ -748,7 +979,20 @@ function XOGame({ onExit }: { onExit: () => void }) {
   };
 
   return (
-    <GameShell title="Tic-Tac-Toe" subtitle="You are X" onExit={onExit} footer={<div className="flex items-center gap-3"><p className="flex-1 text-sm text-cyan-100">{winner === "draw" ? "Draw" : winner ? `${winner} wins` : "Your move"}</p><button type="button" onClick={restart} className="rounded-xl border border-cyan-300/40 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100">Restart</button></div>}>
+    <GameShell
+      title="Tic-Tac-Toe"
+      subtitle="You are X"
+      onExit={onExit}
+      footer={
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <p className="flex-1 text-sm text-cyan-100">{winner === "draw" ? "Draw" : winner ? `${winner} wins` : "Your move"}</p>
+            <button type="button" onClick={restart} className={TOUCH_ACTION_BTN}>Restart</button>
+          </div>
+          <GameModelSuggestion game="xo" compact />
+        </div>
+      }
+    >
       <div className="grid h-full place-items-center bg-[#020617] p-4"><div className="grid w-full max-w-[420px] grid-cols-3 gap-3">{board.map((cell, idx) => (<button key={idx} type="button" onClick={() => play(idx)} className="aspect-square rounded-2xl border border-cyan-300/35 bg-slate-900/75 text-4xl font-bold text-cyan-100">{cell}</button>))}</div></div>
     </GameShell>
   );
@@ -802,7 +1046,20 @@ function MemoryGame({ onExit }: { onExit: () => void }) {
   };
 
   return (
-    <GameShell title="Memory Match" subtitle="Find all pairs" onExit={onExit} footer={<div className="flex items-center gap-3"><p className="flex-1 text-sm text-cyan-100">Moves: {moves} {won ? "· Complete" : ""}</p><button type="button" onClick={restart} className="rounded-xl border border-cyan-300/40 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100">Restart</button></div>}>
+    <GameShell
+      title="Memory Match"
+      subtitle="Find all pairs"
+      onExit={onExit}
+      footer={
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <p className="flex-1 text-sm text-cyan-100">Moves: {moves} {won ? "· Complete" : ""}</p>
+            <button type="button" onClick={restart} className={TOUCH_ACTION_BTN}>Restart</button>
+          </div>
+          <GameModelSuggestion game="memory" compact />
+        </div>
+      }
+    >
       <div className="grid h-full place-items-center bg-[#020617] p-4"><div className="grid w-full max-w-[520px] grid-cols-4 gap-3">{cards.map((card, idx) => (<button key={card.id} type="button" onClick={() => flip(idx)} className={`aspect-square rounded-xl border text-lg font-semibold transition ${card.open || card.matched ? "border-cyan-300/60 bg-cyan-400/15 text-cyan-100" : "border-slate-500/30 bg-slate-900/70 text-slate-300"}`}>{card.open || card.matched ? card.value : "?"}</button>))}</div></div>
     </GameShell>
   );
@@ -832,13 +1089,16 @@ export function PXPlayClient() {
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {TILES.map((tile) => {
           const Icon = tile.icon;
+          const selected = active === tile.id;
           return (
             <article key={tile.id} className="px-panel px-hover-lift relative overflow-hidden p-5">
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-400/12 via-blue-500/10 to-transparent opacity-60" />
               <Icon className="relative h-5 w-5 text-cyan-300" />
               <h2 className="relative mt-3 text-lg font-semibold text-slate-900 dark:text-white">{tile.name}</h2>
               <p className="relative mt-1 text-sm text-slate-600 dark:text-slate-300">{tile.subtitle}</p>
-              <button type="button" onClick={() => setActive(tile.id)} className="px-button relative mt-4 w-full">Play</button>
+              <button type="button" onClick={() => setActive(tile.id)} className="px-button relative mt-4 w-full">
+                {selected ? "Playing" : "Play"}
+              </button>
             </article>
           );
         })}

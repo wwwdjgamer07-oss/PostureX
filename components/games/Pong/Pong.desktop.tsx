@@ -1,5 +1,7 @@
 "use client";
 
+import GameModelSuggestion from "@/components/games/GameModelSuggestion";
+
 type PongDesktopProps = {
   onExit?: () => void;
 };
@@ -20,7 +22,9 @@ export default function PongDesktop({ onExit }: PongDesktopProps) {
         ) : null}
       </div>
       <p className="text-sm text-slate-300">Desktop Pong implementation remains in the existing desktop game system.</p>
+      <div className="mt-3">
+        <GameModelSuggestion game="pong" />
+      </div>
     </div>
   );
 }
-

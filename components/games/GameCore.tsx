@@ -173,7 +173,8 @@ function GameShell({
   onStop,
   hud,
   children,
-  result
+  result,
+  footer
 }: {
   running: boolean;
   loading: boolean;
@@ -184,6 +185,7 @@ function GameShell({
   hud: ArenaHUD;
   children: ReactNode;
   result: SessionResult | null;
+  footer?: ReactNode;
 }) {
   const [flash, setFlash] = useState(false);
 
@@ -263,6 +265,7 @@ function GameShell({
               Complete
             </button>
           </div>
+          {footer ? <div>{footer}</div> : null}
         </div>
       </div>
 

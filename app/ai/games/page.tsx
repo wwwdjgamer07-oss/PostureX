@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { Gamepad2 } from "lucide-react";
+import GameModelSuggestion from "@/components/games/GameModelSuggestion";
 
 const BalanceGame = dynamic(() => import("@/components/games/BalanceGame"), { ssr: false });
 const SlouchGame = dynamic(() => import("@/components/games/SlouchGame"), { ssr: false });
@@ -58,7 +59,7 @@ export default function AIGamesPage() {
                 activeGame === key ? "bg-cyan-400/20 text-cyan-100" : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              {label}
+              {activeGame === key ? `${label} • Selected` : label}
             </button>
           ))}
         </div>
@@ -70,22 +71,34 @@ export default function AIGamesPage() {
           const game = GAME_META[key];
           const selected = activeGame === key;
           return (
-            <button
+            <article
               key={key}
-              type="button"
-              onClick={() => setActiveGame(key)}
               className={`overflow-hidden rounded-2xl border bg-slate-900/55 text-left transition hover:border-cyan-300/45 ${
                 selected ? "border-cyan-300/60 shadow-[0_0_30px_rgba(34,211,238,0.18)]" : "border-slate-500/30"
               }`}
             >
-              <div className="relative aspect-[16/9] w-full">
-                <Image src={game.image} alt={game.label} fill className="object-cover" />
+              <button type="button" onClick={() => setActiveGame(key)} className="block w-full text-left">
+                <div className="relative aspect-[16/9] w-full">
+                  <Image src={game.image} alt={game.label} fill className="object-cover" />
+                </div>
+                <div className="p-4 pb-3">
+                  <p className="text-sm font-semibold text-cyan-100">{game.label}</p>
+                  <p className="mt-1 text-xs text-slate-300">{game.short}</p>
+                  <span
+                    className={`mt-3 inline-flex rounded-lg border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] ${
+                      selected
+                        ? "border-cyan-300/60 bg-cyan-400/20 text-cyan-100"
+                        : "border-slate-400/35 bg-slate-900/65 text-slate-200"
+                    }`}
+                  >
+                    {selected ? "Selected" : "Select Game"}
+                  </span>
+                </div>
+              </button>
+              <div className="px-4 pb-4">
+                <GameModelSuggestion game={key} compact />
               </div>
-              <div className="p-4">
-                <p className="text-sm font-semibold text-cyan-100">{game.label}</p>
-                <p className="mt-1 text-xs text-slate-300">{game.short}</p>
-              </div>
-            </button>
+            </article>
           );
         })}
       </section>

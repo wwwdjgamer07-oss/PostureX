@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GameShell, usePostureFeed, type SessionResult } from "@/components/games/GameCore";
+import GameModelSuggestion from "@/components/games/GameModelSuggestion";
 import { getAlignmentStability, getBalanceValue, getCorrectionResponse, type GamePostureSample } from "@/lib/games/postureAdapter";
 import { computeUnifiedGameScore } from "@/lib/games/scoring";
 import { calculateRewards, readRewardProgress, saveRewardProgress } from "@/lib/games/rewards";
@@ -194,7 +195,17 @@ export default function BalanceGame() {
   };
 
   return (
-    <GameShell running={running} loading={loading} error={error} videoRef={videoRef} onStart={handleStart} onStop={() => finalize("manual")} hud={hud} result={result}>
+    <GameShell
+      running={running}
+      loading={loading}
+      error={error}
+      videoRef={videoRef}
+      onStart={handleStart}
+      onStop={() => finalize("manual")}
+      hud={hud}
+      result={result}
+      footer={<GameModelSuggestion game="balance" compact />}
+    >
       <div className="relative flex h-full w-full items-center justify-center">
         <div className="absolute h-[420px] w-[420px] animate-[spin_28s_linear_infinite] rounded-full border border-cyan-300/20" />
         <div className={`absolute inset-y-0 left-[8%] w-3 rounded-full ${danger ? "bg-rose-500/75" : "bg-cyan-400/25"}`} />

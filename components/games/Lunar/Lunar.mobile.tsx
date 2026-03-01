@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import LunarLearningPanel from "./LunarLearningPanel";
 
 type LunarMobileProps = {
   onExit?: () => void;
 };
-const MAX_DPR = 2;
+const MAX_DPR = 3;
 
 export default function LunarMobile({ onExit }: LunarMobileProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -31,7 +32,13 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
     resize();
     const obs = new ResizeObserver(resize);
     obs.observe(container);
-    return () => obs.disconnect();
+    window.addEventListener("resize", resize);
+    window.addEventListener("orientationchange", resize);
+    return () => {
+      obs.disconnect();
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("orientationchange", resize);
+    };
   }, []);
 
   useEffect(() => {
@@ -40,7 +47,7 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
-      ctx.imageSmoothingEnabled = false;
+      ctx.imageSmoothingEnabled = true;
 
       const dt = 1 / 60;
       const w = canvas.width;
@@ -168,6 +175,7 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
             Right
           </button>
         </div>
+        <LunarLearningPanel compact />
       </div>
     </div>
   );

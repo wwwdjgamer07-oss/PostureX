@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GameShell, usePostureFeed, type SessionResult } from "@/components/games/GameCore";
+import GameModelSuggestion from "@/components/games/GameModelSuggestion";
 import { getAlignmentStability, getCorrectionResponse, getSlouchState, type GamePostureSample } from "@/lib/games/postureAdapter";
 import { computeUnifiedGameScore } from "@/lib/games/scoring";
 import { calculateRewards, readRewardProgress, saveRewardProgress } from "@/lib/games/rewards";
@@ -146,6 +147,7 @@ export default function SlouchGame() {
       onStop={finishGame}
       hud={hud}
       result={result}
+      footer={<GameModelSuggestion game="slouch" compact />}
     >
       <div className="relative h-full w-full">
         <div className="absolute left-1/2 top-[46%] h-28 w-16 -translate-x-1/2 rounded-2xl border border-cyan-300/50 bg-cyan-400/15" />

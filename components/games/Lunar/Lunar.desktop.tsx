@@ -1,5 +1,7 @@
 "use client";
 
+import LunarLearningPanel from "./LunarLearningPanel";
+
 type LunarDesktopProps = {
   onExit?: () => void;
 };
@@ -20,7 +22,9 @@ export default function LunarDesktop({ onExit }: LunarDesktopProps) {
         ) : null}
       </div>
       <p className="text-sm text-slate-300">Desktop Lunar implementation remains in the existing desktop game system.</p>
+      <div className="mt-3">
+        <LunarLearningPanel />
+      </div>
     </div>
   );
 }
-

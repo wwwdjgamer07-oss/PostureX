@@ -2,9 +2,10 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import Script from "next/script";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Cpu, Gamepad2, Sparkles } from "lucide-react";
+import { aiChat, aiStream, getAIProviders, type AIProvider } from "@/lib/ai";
+import GameModelSuggestion from "@/components/games/GameModelSuggestion";
 import type {
   ImageAnalyzeInput,
   ImageGenerateInput,
@@ -15,18 +16,6 @@ import type {
   TextGenerateInput,
   TtsInput
 } from "@/components/playground/types";
-
-type ChatOptions = {
-  model?: string;
-  stream?: boolean;
-  temperature?: number;
-  max_tokens?: number;
-};
-
-type StreamPart = {
-  text?: string;
-  reasoning?: string;
-};
 
 type PuterApi = {
   chat: (...args: unknown[]) => Promise<unknown>;
@@ -138,42 +127,8 @@ function parseTextResult(result: unknown) {
   return JSON.stringify(result, null, 2);
 }
 
-function isUnsupportedTemperatureError(err: unknown) {
-  const message = getErrorMessage(err).toLowerCase();
-  return message.includes("unsupported value: 'temperature'") || message.includes("default (1) value is supported");
-}
-
-function isEmptyLengthResult(result: unknown) {
-  if (!result || typeof result !== "object") return false;
-
-  if ("choices" in result) {
-    const choices = (result as { choices?: unknown }).choices;
-    if (!Array.isArray(choices) || choices.length === 0) return false;
-    const first = choices[0] as { finish_reason?: unknown; message?: { content?: unknown } };
-    const finishReason = typeof first?.finish_reason === "string" ? first.finish_reason.toLowerCase() : "";
-    const content = first?.message?.content;
-    const contentEmpty =
-      content === "" ||
-      content == null ||
-      (Array.isArray(content) && content.every((part) => !(part && typeof part === "object" && "text" in part)));
-    return finishReason === "length" && contentEmpty;
-  }
-
-  if ("message" in result || "finish_reason" in result) {
-    const single = result as { finish_reason?: unknown; message?: { content?: unknown } };
-    const finishReason = typeof single.finish_reason === "string" ? single.finish_reason.toLowerCase() : "";
-    const content = single.message?.content;
-    const contentEmpty =
-      content === "" ||
-      content == null ||
-      (Array.isArray(content) && content.every((part) => !(part && typeof part === "object" && "text" in part)));
-    return finishReason === "length" && contentEmpty;
-  }
-
-  return false;
-}
-
 export function PXAIPlaygroundClient() {
+  const [provider, setProvider] = useState<AIProvider>("puter");
   const [playgroundState, setPlaygroundState] = useState<PlaygroundState>({
     sdkReady: false,
     busyModule: null,
@@ -188,9 +143,23 @@ export function PXAIPlaygroundClient() {
     ttsAudioUrl: ""
   });
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const syncSdk = () => {
+      const loaded = Boolean((window as Window & { puter?: { ai?: PuterApi } }).puter?.ai);
+      setPlaygroundState((prev) => (prev.sdkReady === loaded ? prev : { ...prev, sdkReady: loaded }));
+    };
+
+    syncSdk();
+    const interval = window.setInterval(syncSdk, 1200);
+    return () => window.clearInterval(interval);
+  }, []);
+
   const helperText = useMemo(() => {
+    if (provider !== "puter") return `Using ${provider.toUpperCase()} provider.`;
     return playgroundState.sdkReady ? "Puter SDK loaded." : "Loading Puter SDK...";
-  }, [playgroundState.sdkReady]);
+  }, [provider, playgroundState.sdkReady]);
 
   const getPuter = () => {
     const api = (window as Window & { puter?: { ai?: PuterApi } }).puter?.ai;
@@ -220,34 +189,9 @@ export function PXAIPlaygroundClient() {
 
   const handleTextGenerate = async (input: TextGenerateInput) => {
     await runWithModule("text", input.prompt, async () => {
-      if (!Number.isFinite(input.temperature) || input.temperature < 0 || input.temperature > 2) {
-        throw new Error("Temperature must be between 0 and 2.");
-      }
-      if (!Number.isFinite(input.maxTokens) || input.maxTokens < 1) {
-        throw new Error("Max tokens must be a positive number.");
-      }
-
-      const api = getPuter();
       const prompt = appendPXContext(input.prompt);
-      const options: ChatOptions = {
-        model: input.model,
-        max_tokens: Math.floor(input.maxTokens)
-      };
-
-      let result: unknown;
-      try {
-        result = await api.chat(prompt, { ...options, temperature: input.temperature });
-      } catch (error) {
-        if (!isUnsupportedTemperatureError(error)) throw error;
-        result = await api.chat(prompt, options);
-      }
-
-      if (isEmptyLengthResult(result)) {
-        // Retry without max_tokens/temperature so providers with strict defaults can return actual content.
-        result = await api.chat(prompt, { model: input.model });
-      }
-
-      setPlaygroundOutputs((prev) => ({ ...prev, text: parseTextResult(result) }));
+      const result = await aiChat(prompt, provider);
+      setPlaygroundOutputs((prev) => ({ ...prev, text: result || "No text response returned." }));
     });
   };
 
@@ -275,15 +219,12 @@ export function PXAIPlaygroundClient() {
 
   const handleStream = async (input: StreamInput) => {
     await runWithModule("stream", input.prompt, async () => {
-      const api = getPuter();
       const prompt = appendPXContext(input.prompt);
       setPlaygroundOutputs((prev) => ({ ...prev, stream: "" }));
 
-      const stream = (await api.chat(prompt, { model: input.model, stream: true })) as AsyncIterable<StreamPart>;
-      for await (const part of stream) {
-        const delta = `${part?.reasoning ?? ""}${part?.text ?? ""}`;
-        if (!delta) continue;
-        setPlaygroundOutputs((prev) => ({ ...prev, stream: `${prev.stream}${delta}` }));
+      for await (const chunk of aiStream(prompt, provider)) {
+        if (!chunk) continue;
+        setPlaygroundOutputs((prev) => ({ ...prev, stream: `${prev.stream}${chunk}` }));
       }
     });
   };
@@ -301,10 +242,10 @@ export function PXAIPlaygroundClient() {
     });
   };
 
+  const textAndStreamDisabled = playgroundState.busyModule !== null || (provider === "puter" && !playgroundState.sdkReady);
+
   return (
     <>
-      <Script src="https://js.puter.com/v2/" strategy="afterInteractive" onLoad={() => setPlaygroundState((prev) => ({ ...prev, sdkReady: true }))} />
-
       <div className="px-shell space-y-6 pb-12">
         <section className="px-panel p-6 sm:p-8">
           <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-cyan-300">
@@ -319,6 +260,20 @@ export function PXAIPlaygroundClient() {
             <Sparkles className="h-3.5 w-3.5" />
             {helperText}
           </p>
+          <div className="mt-3 max-w-xs">
+            <label className="mb-1 block text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Provider</label>
+            <select
+              value={provider}
+              onChange={(event) => setProvider(event.target.value as AIProvider)}
+              className="w-full rounded-xl border border-slate-500/35 bg-slate-950/50 p-2 text-sm text-slate-100"
+            >
+              {getAIProviders().map((item) => (
+                <option key={item} value={item}>
+                  {item.toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </div>
           {playgroundState.error ? (
             <p className="mt-3 rounded-xl border border-rose-300/35 bg-rose-500/10 p-3 text-sm text-rose-200">{playgroundState.error}</p>
           ) : null}
@@ -337,6 +292,9 @@ export function PXAIPlaygroundClient() {
             <Link href="/ai/games" className="px-button mt-4 inline-flex">
               Open Posture Games
             </Link>
+            <div className="mt-3">
+              <GameModelSuggestion game="reflex" compact />
+            </div>
           </article>
 
           <article className="px-panel p-6">
@@ -351,10 +309,13 @@ export function PXAIPlaygroundClient() {
             <Link href="/px-play" className="px-button mt-4 inline-flex">
               Open PX Play
             </Link>
+            <div className="mt-3">
+              <GameModelSuggestion game="lander" compact />
+            </div>
           </article>
 
           <TextGenerationCard
-            disabled={!playgroundState.sdkReady || playgroundState.busyModule !== null}
+            disabled={textAndStreamDisabled}
             isBusy={playgroundState.busyModule === "text"}
             output={playgroundOutputs.text}
             onGenerate={handleTextGenerate}
@@ -370,7 +331,7 @@ export function PXAIPlaygroundClient() {
             onAnalyze={handleImageAnalyze}
           />
           <StreamingChatCard
-            disabled={!playgroundState.sdkReady || playgroundState.busyModule !== null}
+            disabled={textAndStreamDisabled}
             output={playgroundOutputs.stream}
             onStream={handleStream}
           />

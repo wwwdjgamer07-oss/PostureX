@@ -24,13 +24,11 @@ type PuterApi = {
   txt2speech: (text: string, options?: { provider?: string; model?: string }) => Promise<HTMLAudioElement>;
 };
 
-declare global {
-  interface Window {
-    puter?: {
-      ai?: PuterApi;
-    };
-  }
-}
+type PuterWindow = Window & {
+  puter?: {
+    ai?: PuterApi;
+  };
+};
 
 const textModels = ["gpt-5-nano", "gpt-5-mini", "gpt-5", "gpt-5.2", "gpt-5.2-chat"];
 const imageModels = ["gpt-image-1.5", "gpt-image-1-mini", "gpt-image-1", "dall-e-3"];
@@ -170,7 +168,7 @@ export default function NewFeaturePage() {
   }, [sdkReady]);
 
   const getPuter = () => {
-    const api = window.puter?.ai;
+    const api = (window as PuterWindow).puter?.ai;
     if (!api) {
       throw new Error("Puter SDK is not ready. Wait a moment and try again.");
     }

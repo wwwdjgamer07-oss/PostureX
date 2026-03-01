@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
+import GameModelSuggestion from "@/components/games/GameModelSuggestion";
 
 type SnakeMobileProps = {
   onExit?: () => void;
@@ -10,7 +11,7 @@ type Point = { x: number; y: number };
 type Dir = { x: number; y: number };
 
 const GRID = 22;
-const MAX_DPR = 2;
+const MAX_DPR = 3;
 
 export default function SnakeMobile({ onExit }: SnakeMobileProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,7 +44,13 @@ export default function SnakeMobile({ onExit }: SnakeMobileProps) {
     resize();
     const observer = new ResizeObserver(resize);
     observer.observe(container);
-    return () => observer.disconnect();
+    window.addEventListener("resize", resize);
+    window.addEventListener("orientationchange", resize);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("orientationchange", resize);
+    };
   }, []);
 
   useEffect(() => {
@@ -58,7 +65,7 @@ export default function SnakeMobile({ onExit }: SnakeMobileProps) {
         rafRef.current = requestAnimationFrame(render);
         return;
       }
-      ctx.imageSmoothingEnabled = false;
+      ctx.imageSmoothingEnabled = true;
 
       const tickMs = 120;
       if (!gameOver && time - lastTickRef.current >= tickMs) {
@@ -200,10 +207,11 @@ export default function SnakeMobile({ onExit }: SnakeMobileProps) {
       </div>
 
       <div className="space-y-3 border-t border-cyan-400/20 bg-white/5 p-3 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
-        <p className="text-sm text-cyan-100">Score: {score} · Swipe on the board to turn</p>
+        <p className="text-sm text-cyan-100">Score: {score} - Swipe on the board to turn</p>
         <button type="button" onClick={restart} className="w-full rounded-2xl border border-cyan-400/30 bg-cyan-500/15 p-3 shadow-[0_0_24px_rgba(34,211,238,0.18)]">
           Restart
         </button>
+        <GameModelSuggestion game="snake" compact />
       </div>
     </div>
   );
