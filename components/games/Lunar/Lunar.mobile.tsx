@@ -6,6 +6,16 @@ type LunarMobileProps = {
   onExit?: () => void;
 };
 const MAX_DPR = 3;
+const GRAVITY = 0.035;
+const THRUST = 0.08;
+const ROT_SPEED = 0.03;
+const FUEL_BURN = 0.25;
+const MAX_SAFE_VY = 1.6;
+const MAX_SAFE_ANGLE = 18;
+const PAD_WIDTH = 120;
+const PAD_HEIGHT = 8;
+const UI_TEXT = "#EAF6FF";
+const UI_ACCENT = "#7FDBFF";
 
 export default function LunarMobile({ onExit }: LunarMobileProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -13,7 +23,10 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
   const rafRef = useRef<number | null>(null);
   const keysRef = useRef({ left: false, right: false, thrust: false });
   const shipRef = useRef({ x: 180, y: 120, vx: 0, vy: 0, angle: 0 });
+  const thrustPowerRef = useRef(0);
+  const isMobileRef = useRef(false);
   const [fuel, setFuel] = useState(280);
+  const [status, setStatus] = useState<"running" | "won" | "crashed">("running");
 
   useEffect(() => {
     const container = containerRef.current;
@@ -87,6 +100,11 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
   }, []);
 
   useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    isMobileRef.current = /Mobi|Android/i.test(navigator.userAgent);
+  }, []);
+
+  useEffect(() => {
     const loop = () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -95,30 +113,62 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
       ctx.imageSmoothingEnabled = true;
 
       const dt = 1 / 60;
+      const step = dt * 60;
       const w = canvas.width;
       const h = canvas.height;
       const ground = h - 58;
+      const padLeft = Math.max(16, w * 0.5 - PAD_WIDTH / 2);
+      const padRight = padLeft + PAD_WIDTH;
+      const padTop = ground - PAD_HEIGHT / 2;
 
-      if (keysRef.current.left) shipRef.current.angle -= 1.7 * dt;
-      if (keysRef.current.right) shipRef.current.angle += 1.7 * dt;
+      const rotatingLeft = keysRef.current.left;
+      const rotatingRight = keysRef.current.right;
+      const thrusting = keysRef.current.thrust && fuel > 0;
+      if (status === "running") {
+        if (rotatingLeft) shipRef.current.angle -= ROT_SPEED * step;
+        if (rotatingRight) shipRef.current.angle += ROT_SPEED * step;
+        if (!rotatingLeft && !rotatingRight) {
+          shipRef.current.angle *= Math.pow(0.98, step);
+        }
 
-      let thrust = 0;
-      if (keysRef.current.thrust && fuel > 0) {
-        thrust = 120;
-        setFuel((f) => Math.max(0, f - 0.5));
+        if (thrusting) {
+          thrustPowerRef.current += 0.002 * step;
+        } else {
+          thrustPowerRef.current *= Math.pow(0.9, step);
+        }
+        thrustPowerRef.current = Math.min(THRUST, Math.max(0, thrustPowerRef.current));
+
+        let thrustPower = thrustPowerRef.current;
+        if (isMobileRef.current) thrustPower *= 1.15;
+        if (thrusting) {
+          setFuel((f) => Math.max(0, f - FUEL_BURN * step));
+        }
+
+        shipRef.current.vx += Math.sin(shipRef.current.angle) * thrustPower * 0.45 * step;
+        shipRef.current.vy += GRAVITY * step;
+        shipRef.current.vy -= thrustPower * step;
+        shipRef.current.x += shipRef.current.vx * step;
+        shipRef.current.y += shipRef.current.vy * step;
       }
-
-      shipRef.current.vx += Math.sin(shipRef.current.angle) * thrust * dt;
-      shipRef.current.vy += (42 - Math.cos(shipRef.current.angle) * thrust) * dt;
-      shipRef.current.x += shipRef.current.vx * dt;
-      shipRef.current.y += shipRef.current.vy * dt;
 
       shipRef.current.x = Math.max(10, Math.min(w - 10, shipRef.current.x));
 
-      if (shipRef.current.y >= ground) {
-        shipRef.current.y = ground;
-        shipRef.current.vx *= 0.2;
+      const shipBottom = shipRef.current.y + 10;
+      const angleDeg = Math.abs((shipRef.current.angle * 180) / Math.PI);
+      const success =
+        Math.abs(shipRef.current.vy) < MAX_SAFE_VY &&
+        Math.abs(shipRef.current.vx) < 1.2 &&
+        angleDeg < MAX_SAFE_ANGLE &&
+        shipBottom >= padTop &&
+        shipRef.current.x > padLeft &&
+        shipRef.current.x < padRight;
+
+      if (status === "running" && shipBottom >= ground) {
+        setStatus(success ? "won" : "crashed");
+        shipRef.current.y = ground - 10;
+        shipRef.current.vx = 0;
         shipRef.current.vy = 0;
+        thrustPowerRef.current = 0;
       }
 
       ctx.clearRect(0, 0, w, h);
@@ -133,6 +183,8 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
         ctx.lineTo(i, ground + 18 - Math.sin(i * 0.05) * 22);
       }
       ctx.stroke();
+      ctx.fillStyle = "#64748b";
+      ctx.fillRect(padLeft, padTop, PAD_WIDTH, PAD_HEIGHT);
 
       ctx.save();
       ctx.translate(shipRef.current.x, shipRef.current.y);
@@ -145,7 +197,7 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
       ctx.lineTo(8, 10);
       ctx.closePath();
       ctx.stroke();
-      if (keysRef.current.thrust && fuel > 0) {
+      if (status === "running" && keysRef.current.thrust && fuel > 0) {
         ctx.strokeStyle = "#22d3ee";
         ctx.beginPath();
         ctx.moveTo(-4, 10);
@@ -155,10 +207,20 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
       }
       ctx.restore();
 
-      ctx.fillStyle = "#e5e7eb";
+      ctx.fillStyle = UI_TEXT;
       ctx.font = "600 16px ui-sans-serif, system-ui, sans-serif";
       ctx.fillText(`Fuel: ${Math.round(fuel)}`, 12, 24);
+      ctx.fillStyle = UI_ACCENT;
       ctx.fillText(`V-Speed: ${Math.round(shipRef.current.vy)}`, 12, 44);
+      if (status !== "running") {
+        ctx.fillStyle = "rgba(0,0,0,0.45)";
+        ctx.fillRect(w * 0.2, h * 0.22, w * 0.6, 80);
+        ctx.fillStyle = status === "won" ? "#86efac" : "#fda4af";
+        ctx.font = "bold 26px ui-sans-serif, system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText(status === "won" ? "MISSION SUCCESS" : "CRASH", w / 2, h * 0.29);
+        ctx.textAlign = "start";
+      }
 
       rafRef.current = requestAnimationFrame(loop);
     };
@@ -167,7 +229,7 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [fuel]);
+  }, [fuel, status]);
 
   return (
     <div className="fixed inset-0 flex min-h-[100dvh] flex-col bg-[#020617] text-white">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type BreakoutMobileProps = {
   onExit?: () => void;
@@ -23,7 +23,9 @@ type CanvasMetrics = {
   brickOffsetTop: number;
 };
 
-const MAX_DPR = 3;
+const UI_TEXT = "#EAF6FF";
+const UI_ACCENT = "#7FDBFF";
+const UI_MUTED = "#A9C7D9";
 
 export default function BreakoutMobile({ onExit }: BreakoutMobileProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -35,18 +37,19 @@ export default function BreakoutMobile({ onExit }: BreakoutMobileProps) {
   const bricksRef = useRef<Brick[]>([]);
   const scoreRef = useRef(0);
   const lastFrameRef = useRef<number>(0);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   const getMetrics = useCallback((): CanvasMetrics => {
     const width = sizeRef.current.width;
     const height = sizeRef.current.height;
-    const paddleWidth = width * 0.18;
-    const paddleHeight = height * 0.02;
-    const paddleY = height - paddleHeight * 2;
-    const ballRadius = width * 0.012;
-    const brickRows = 5;
+    const paddleWidth = width * 0.22;
+    const paddleHeight = height * 0.018;
+    const paddleY = height * 0.92;
+    const ballRadius = Math.max(6, width * 0.012);
+    const brickRows = 6;
     const brickCols = 8;
     const brickWidth = width / brickCols;
-    const brickHeight = height * 0.04;
+    const brickHeight = height * 0.035;
     const brickOffsetTop = height * 0.08;
     return {
       width,
@@ -64,6 +67,8 @@ export default function BreakoutMobile({ onExit }: BreakoutMobileProps) {
     };
   }, []);
 
+  const getBaseSpeed = useCallback((width: number) => Math.max(4, width * 0.006), []);
+
   const createBricks = useCallback((metrics: CanvasMetrics) => {
     const items: Brick[] = [];
     for (let row = 0; row < metrics.brickRows; row += 1) {
@@ -80,16 +85,20 @@ export default function BreakoutMobile({ onExit }: BreakoutMobileProps) {
     return items;
   }, []);
 
-  const resetBall = useCallback((direction = 1) => {
+  const resetBall = useCallback((direction?: number) => {
     const metrics = getMetrics();
+    const baseSpeed = getBaseSpeed(metrics.width);
+    let vxSeed = direction ?? (Math.random() * 2 - 1);
+    if (Math.abs(vxSeed) < 0.25) vxSeed = vxSeed < 0 ? -0.6 : 0.6;
+
     ballRef.current = {
       radius: metrics.ballRadius,
       x: metrics.width / 2,
-      y: metrics.paddleY - metrics.ballRadius - 2,
-      vx: metrics.width * 0.003 * direction,
-      vy: -metrics.height * 0.004
+      y: metrics.height * 0.6,
+      vx: baseSpeed * vxSeed,
+      vy: -baseSpeed
     };
-  }, [getMetrics]);
+  }, [getBaseSpeed, getMetrics]);
 
   const resetLayoutState = useCallback(() => {
     const metrics = getMetrics();
@@ -97,14 +106,19 @@ export default function BreakoutMobile({ onExit }: BreakoutMobileProps) {
     paddleXRef.current = (metrics.width - metrics.paddleWidth) / 2;
     paddleTargetXRef.current = paddleXRef.current;
     bricksRef.current = createBricks(metrics);
-    resetBall(1);
+    resetBall();
   }, [createBricks, getMetrics, resetBall]);
+
+  const restartGame = useCallback(() => {
+    scoreRef.current = 0;
+    lastFrameRef.current = 0;
+    resetLayoutState();
+  }, [resetLayoutState]);
 
   const clampPaddle = useCallback(() => {
     const metrics = getMetrics();
     paddleTargetXRef.current = Math.max(0, Math.min(metrics.width - metrics.paddleWidth, paddleTargetXRef.current));
-    paddleXRef.current += (paddleTargetXRef.current - paddleXRef.current) * 0.4;
-    paddleXRef.current = Math.max(0, Math.min(metrics.width - metrics.paddleWidth, paddleXRef.current));
+    paddleXRef.current = paddleTargetXRef.current;
   }, [getMetrics]);
 
   const update = useCallback((deltaFactor: number) => {
@@ -128,6 +142,7 @@ export default function BreakoutMobile({ onExit }: BreakoutMobileProps) {
 
     if (
       ballRef.current.y + ballRef.current.radius >= metrics.paddleY &&
+      ballRef.current.y - ballRef.current.radius <= metrics.paddleY + metrics.paddleHeight &&
       ballRef.current.x >= paddleXRef.current &&
       ballRef.current.x <= paddleXRef.current + metrics.paddleWidth
     ) {
@@ -150,14 +165,13 @@ export default function BreakoutMobile({ onExit }: BreakoutMobileProps) {
       break;
     }
 
-    const remainingBricks = bricksRef.current.some((brick) => brick.alive);
-    if (!remainingBricks) {
+    if (!bricksRef.current.some((brick) => brick.alive)) {
       bricksRef.current = createBricks(metrics);
       resetBall(ballRef.current.vx >= 0 ? 1 : -1);
     }
 
-    if (ballRef.current.y > metrics.height) {
-      resetBall(ballRef.current.vx >= 0 ? 1 : -1);
+    if (ballRef.current.y - ballRef.current.radius > metrics.height) {
+      resetBall();
     }
   }, [clampPaddle, createBricks, getMetrics, resetBall]);
 
@@ -168,7 +182,10 @@ export default function BreakoutMobile({ onExit }: BreakoutMobileProps) {
     ctx.setTransform(metrics.dpr, 0, 0, metrics.dpr, 0, 0);
     ctx.clearRect(0, 0, metrics.width, metrics.height);
 
-    ctx.fillStyle = "#020617";
+    const bg = ctx.createRadialGradient(metrics.width * 0.5, metrics.height * 0.3, 0, metrics.width * 0.5, metrics.height * 0.3, Math.max(metrics.width, metrics.height));
+    bg.addColorStop(0, "#0b1220");
+    bg.addColorStop(1, "#020617");
+    ctx.fillStyle = bg;
     ctx.fillRect(0, 0, metrics.width, metrics.height);
 
     for (const brick of bricksRef.current) {
@@ -187,11 +204,38 @@ export default function BreakoutMobile({ onExit }: BreakoutMobileProps) {
     ctx.arc(ballRef.current.x, ballRef.current.y, ballRef.current.radius, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#a5f3fc";
+    ctx.fillStyle = UI_ACCENT;
     ctx.font = `600 ${Math.max(14, metrics.height * 0.032)}px ui-sans-serif, system-ui, sans-serif`;
     ctx.textBaseline = "top";
     ctx.fillText(`Score ${scoreRef.current}`, metrics.width * 0.03, metrics.height * 0.02);
-  }, [getMetrics]);
+
+    ctx.fillStyle = UI_TEXT;
+    ctx.font = `500 ${Math.max(11, metrics.height * 0.018)}px ui-sans-serif, system-ui, sans-serif`;
+    ctx.fillText("Drag finger to move paddle", metrics.width * 0.03, metrics.height * 0.055);
+
+    if (showTutorial) {
+      ctx.fillStyle = "rgba(2,6,23,0.72)";
+      const panelW = Math.min(360, metrics.width * 0.88);
+      const panelH = 86;
+      const panelX = (metrics.width - panelW) / 2;
+      const panelY = metrics.height * 0.18;
+      ctx.fillRect(panelX, panelY, panelW, panelH);
+      ctx.fillStyle = UI_TEXT;
+      ctx.font = "600 13px ui-sans-serif, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Tutorial", metrics.width / 2, panelY + 14);
+      ctx.fillStyle = UI_MUTED;
+      ctx.fillText("Drag anywhere left/right to move paddle.", metrics.width / 2, panelY + 38);
+      ctx.fillText("Break all bricks, do not miss the ball.", metrics.width / 2, panelY + 58);
+      ctx.textAlign = "start";
+    }
+  }, [getMetrics, showTutorial]);
+
+  useEffect(() => {
+    if (!showTutorial) return;
+    const timer = window.setTimeout(() => setShowTutorial(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, [showTutorial]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -199,26 +243,29 @@ export default function BreakoutMobile({ onExit }: BreakoutMobileProps) {
     canvas.style.touchAction = "none";
 
     const resizeBreakoutCanvas = () => {
+      const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
-      const width = rect.width;
-      const height = rect.height;
-      if (width <= 0 || height <= 0) return;
-      const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
-      canvas.width = Math.max(1, Math.floor(width * dpr));
-      canvas.height = Math.max(1, Math.floor(height * dpr));
-      sizeRef.current = { width, height, dpr };
+      if (rect.width <= 0 || rect.height <= 0) return;
+
+      canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      sizeRef.current = { width: rect.width, height: rect.height, dpr };
       resetLayoutState();
     };
 
     resizeBreakoutCanvas();
     const raf = window.requestAnimationFrame(resizeBreakoutCanvas);
     window.addEventListener("resize", resizeBreakoutCanvas);
-    window.addEventListener("orientationchange", resizeBreakoutCanvas);
 
     return () => {
       window.cancelAnimationFrame(raf);
       window.removeEventListener("resize", resizeBreakoutCanvas);
-      window.removeEventListener("orientationchange", resizeBreakoutCanvas);
     };
   }, [resetLayoutState]);
 
@@ -227,13 +274,15 @@ export default function BreakoutMobile({ onExit }: BreakoutMobileProps) {
     if (!canvas) return;
 
     const updateFromTouch = (event: globalThis.TouchEvent) => {
-      if (!canvasRef.current || event.touches.length === 0) return;
+      if (event.touches.length === 0) return;
       event.preventDefault();
-      const rect = canvasRef.current.getBoundingClientRect();
-      const touch = event.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const x = event.touches[0].clientX - rect.left;
       const metrics = getMetrics();
-      paddleTargetXRef.current = touch.clientX - rect.left - metrics.paddleWidth / 2;
-      paddleTargetXRef.current = Math.max(0, Math.min(metrics.width - metrics.paddleWidth, paddleTargetXRef.current));
+      const next = x - metrics.paddleWidth / 2;
+      const clamped = Math.max(0, Math.min(metrics.width - metrics.paddleWidth, next));
+      paddleTargetXRef.current = clamped;
+      paddleXRef.current = clamped;
     };
 
     canvas.addEventListener("touchstart", updateFromTouch, { passive: false });
@@ -269,24 +318,18 @@ export default function BreakoutMobile({ onExit }: BreakoutMobileProps) {
   }, [draw, update]);
 
   return (
-    <div className="fixed inset-0 flex min-h-[100dvh] flex-col bg-[#020617] text-white">
-      <div className="flex h-12 items-center justify-between border-b border-cyan-500/20 px-3">
-        <span className="text-sm tracking-widest">BREAKOUT</span>
-        <button
-          type="button"
-          onClick={onExit}
-          className="rounded-lg border border-cyan-400/30 bg-slate-900/70 px-3 py-1 text-xs text-cyan-100"
-        >
+    <div className="breakout-stage text-white">
+      <canvas id="breakoutCanvas" ref={canvasRef} className="touch-none" />
+      <div className="breakout-controls">
+        <button type="button" onClick={restartGame} className="rounded-xl border border-cyan-300/40 bg-slate-900/70 px-4 py-2 text-sm text-cyan-100">
+          Restart
+        </button>
+        <button type="button" onClick={() => setShowTutorial(true)} className="rounded-xl border border-cyan-300/40 bg-slate-900/70 px-4 py-2 text-sm text-cyan-100">
+          Tutorial
+        </button>
+        <button type="button" onClick={onExit} className="rounded-xl border border-cyan-300/40 bg-slate-900/70 px-4 py-2 text-sm text-cyan-100">
           Exit
         </button>
-      </div>
-
-      <div className="breakout-wrap flex-1">
-        <canvas id="breakoutCanvas" ref={canvasRef} className="touch-none" />
-      </div>
-
-      <div className="breakout-controls space-y-2 border-t border-cyan-400/20 bg-white/5 p-3 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
-        <p className="text-xs text-cyan-100/85">Touch and drag on the arena to position the paddle.</p>
       </div>
     </div>
   );

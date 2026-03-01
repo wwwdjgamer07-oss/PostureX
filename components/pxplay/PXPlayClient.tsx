@@ -24,6 +24,10 @@ const TILES: Tile[] = [
 const MEMORY_SYMBOLS = ["PX", "AI", "UX", "RX", "GO", "VR"] as const;
 
 const MAX_DPR = 3;
+const GLOBAL_SPEED = 1.6;
+const UI_TEXT = "#EAF6FF";
+const UI_ACCENT = "#7FDBFF";
+const UI_MUTED = "#A9C7D9";
 const TOUCH_BTN_BASE =
   "rounded-xl border border-cyan-300/45 bg-cyan-400/10 py-3 text-sm font-semibold text-cyan-100 backdrop-blur-md active:bg-cyan-400/25";
 const TOUCH_BTN_SUBTLE =
@@ -42,8 +46,27 @@ type LinearDifficultyLearner = {
   lr: number;
 };
 
+const globalKeys: Record<string, boolean> = {};
+let globalKeyListenersReady = false;
+
+function ensureGlobalKeyListeners() {
+  if (globalKeyListenersReady || typeof window === "undefined") return;
+  window.addEventListener("keydown", (event) => {
+    globalKeys[event.code] = true;
+  });
+  window.addEventListener("keyup", (event) => {
+    globalKeys[event.code] = false;
+  });
+  globalKeyListenersReady = true;
+}
+
 function clampNumber(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
+}
+
+function getScale(baseW: number, baseH: number) {
+  if (typeof window === "undefined") return 1;
+  return Math.min(window.innerWidth / baseW, window.innerHeight / baseH);
 }
 
 function createLinearDifficultyLearner(): LinearDifficultyLearner {
@@ -117,13 +140,17 @@ function useCanvasResize(containerRef: React.RefObject<HTMLDivElement>, canvasRe
     if (!container || !canvas) return;
 
     const resize = () => {
-      const w = Math.max(1, container.clientWidth);
-      const h = Math.max(1, container.clientHeight);
+      const w = Math.max(1, window.innerWidth);
+      const h = Math.max(1, window.innerHeight);
       const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
       canvas.width = Math.max(1, Math.floor(w * dpr));
       canvas.height = Math.max(1, Math.floor(h * dpr));
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
     };
 
     resize();
@@ -155,7 +182,7 @@ function GameShell({
   footer?: React.ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex min-h-[100dvh] flex-col bg-[#020617] text-white">
+    <div className="game-container fixed inset-0 z-50 flex min-h-[100dvh] flex-col bg-[#020617] text-white">
       <header className="flex h-12 items-center justify-between border-b border-cyan-400/20 bg-black/30 px-3">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.14em] text-cyan-100">{title}</p>
@@ -284,7 +311,7 @@ function SnakeGame({ onExit }: { onExit: () => void }) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const GRID = 22;
-    const speed = Math.max(0.06, 0.14 - Math.floor(score / 80) * 0.005);
+    const speed = Math.max(0.06 / GLOBAL_SPEED, (0.14 - Math.floor(score / 80) * 0.005) / GLOBAL_SPEED);
 
     if (!over) {
       accumRef.current += dt;
@@ -475,6 +502,16 @@ function SnakeGame({ onExit }: { onExit: () => void }) {
   );
 }
 function LanderGame({ onExit }: { onExit: () => void }) {
+  const GRAVITY = 0.035;
+  const THRUST = 0.08;
+  const ROT_SPEED = 0.03;
+  const FUEL_BURN = 0.25;
+  const MAX_SAFE_VY = 1.6;
+  const MAX_SAFE_ANGLE = 18;
+  const PAD_WIDTH = 120;
+  const PAD_HEIGHT = 8;
+  const MOBILE_BOOST = 1.15;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const leftRef = useRef(false);
@@ -482,7 +519,9 @@ function LanderGame({ onExit }: { onExit: () => void }) {
   const thrustRef = useRef(false);
   const shipRef = useRef({ x: 220, y: 120, vx: 0, vy: 0, a: 0 });
   const terrainRef = useRef<Array<{ x: number; y: number }>>([]);
-  const padRef = useRef({ x: 0, w: 90, y: 0 });
+  const padRef = useRef({ x: 0, w: PAD_WIDTH, y: 0 });
+  const thrustPowerRef = useRef(0);
+  const isMobileRef = useRef(false);
   const [fuel, setFuel] = useState(320);
   const [state, setState] = useState<"running" | "won" | "crashed">("running");
   const [level, setLevel] = useState(1);
@@ -496,31 +535,38 @@ function LanderGame({ onExit }: { onExit: () => void }) {
   const regenerate = useCallback((w: number, h: number) => {
     const points: Array<{ x: number; y: number }> = [];
     const step = Math.max(28, Math.floor(w / 14));
+    const padLeft = Math.max(24, Math.min(w - PAD_WIDTH - 24, w * 0.62 - PAD_WIDTH / 2));
+    const padRight = padLeft + PAD_WIDTH;
     let x = 0;
     while (x <= w + step) {
-      const y = h * (0.68 + Math.sin(x * 0.012) * 0.1 + (Math.random() - 0.5) * 0.06);
+      let y = h * (0.68 + Math.sin(x * 0.012) * 0.1 + (Math.random() - 0.5) * 0.06);
+      if (x >= padLeft && x <= padRight) {
+        y = h * 0.72;
+      }
       points.push({ x, y });
       x += step;
     }
-    const padIndex = Math.max(2, Math.min(points.length - 4, Math.floor(points.length * 0.65)));
-    const padY = points[padIndex].y;
-    points[padIndex].y = padY;
-    points[padIndex + 1].y = padY;
-    points[padIndex + 2].y = padY;
+    const padY = h * 0.72;
+    for (let i = 0; i < points.length; i += 1) {
+      if (points[i].x >= padLeft && points[i].x <= padRight) {
+        points[i].y = padY;
+      }
+    }
     terrainRef.current = points;
-    padRef.current = { x: points[padIndex].x, w: points[padIndex + 2].x - points[padIndex].x, y: padY };
+    padRef.current = { x: padLeft, w: PAD_WIDTH, y: padY };
   }, []);
 
   const restart = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     shipRef.current = { x: canvas.width * 0.2, y: canvas.height * 0.2, vx: 0, vy: 0, a: 0 };
+    thrustPowerRef.current = 0;
     setLevel(1);
     levelStartedAtRef.current = Date.now();
     diffStatsRef.current = { wins: 0, failures: 0, avgWinSeconds: 20 };
     learnerRef.current = createLinearDifficultyLearner();
     difficultyScaleRef.current = 1;
-    setFuel(320);
+    setFuel(360);
     setState("running");
     regenerate(canvas.width, canvas.height);
   }, [regenerate]);
@@ -546,7 +592,8 @@ function LanderGame({ onExit }: { onExit: () => void }) {
       const upcoming = prev + 1;
       regenerate(canvas.width, canvas.height);
       shipRef.current = { x: canvas.width * 0.2, y: canvas.height * 0.2, vx: 0, vy: 0, a: 0 };
-      setFuel(Math.max(140, Math.round(320 - (upcoming - 1) * (10 + difficulty * 6))));
+      thrustPowerRef.current = 0;
+      setFuel(Math.max(220, Math.round(360 - (upcoming - 1) * (6 + difficulty * 4))));
       setState("running");
       levelStartedAtRef.current = Date.now();
       return upcoming;
@@ -554,6 +601,11 @@ function LanderGame({ onExit }: { onExit: () => void }) {
   }, [regenerate]);
 
   useEffect(() => { restart(); }, [restart]);
+
+  useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    isMobileRef.current = /Mobi|Android/i.test(navigator.userAgent);
+  }, []);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -601,34 +653,63 @@ function LanderGame({ onExit }: { onExit: () => void }) {
     if (!terrainRef.current.length) regenerate(w, h);
 
     if (state === "running") {
-      const difficulty = difficultyScaleRef.current;
-      const turnSpeed = 1.8 + (level - 1) * 0.08 * difficulty;
-      const thrustPower = Math.max(125, 180 - (level - 1) * (4 + difficulty * 2.5));
-      const gravity = 54 + (level - 1) * (2.2 + difficulty * 1.6);
-      if (leftRef.current) shipRef.current.a -= turnSpeed * dt;
-      if (rightRef.current) shipRef.current.a += turnSpeed * dt;
-      let thrust = 0;
-      if (thrustRef.current && fuel > 0) {
-        thrust = thrustPower;
-        setFuel((f) => Math.max(0, f - 22 * dt));
+      const step = dt * 60;
+      const rotatingLeft = leftRef.current;
+      const rotatingRight = rightRef.current;
+      const thrusting = thrustRef.current && fuel > 0;
+
+      if (rotatingLeft) shipRef.current.a -= ROT_SPEED * step;
+      if (rotatingRight) shipRef.current.a += ROT_SPEED * step;
+      if (!rotatingLeft && !rotatingRight) {
+        shipRef.current.a *= Math.pow(0.98, step);
       }
-      shipRef.current.vx += Math.sin(shipRef.current.a) * thrust * dt;
-      shipRef.current.vy += (gravity - Math.cos(shipRef.current.a) * thrust) * dt;
-      shipRef.current.x += shipRef.current.vx * dt;
-      shipRef.current.y += shipRef.current.vy * dt;
+
+      if (thrusting) {
+        thrustPowerRef.current += 0.002 * step;
+      } else {
+        thrustPowerRef.current *= Math.pow(0.9, step);
+      }
+      thrustPowerRef.current = Math.min(THRUST, Math.max(0, thrustPowerRef.current));
+
+      let effectiveThrust = thrustPowerRef.current;
+      if (isMobileRef.current) {
+        effectiveThrust *= MOBILE_BOOST;
+      }
+
+      if (thrusting) {
+        setFuel((f) => Math.max(0, f - FUEL_BURN * step));
+      }
+
+      shipRef.current.vx += Math.sin(shipRef.current.a) * effectiveThrust * 0.45 * step;
+      shipRef.current.vy += GRAVITY * step;
+      shipRef.current.vy -= effectiveThrust * step;
+      shipRef.current.x += shipRef.current.vx * step;
+      shipRef.current.y += shipRef.current.vy * step;
       shipRef.current.x = Math.max(10, Math.min(w - 10, shipRef.current.x));
+
       const groundY = terrainY(shipRef.current.x);
-      if (shipRef.current.y >= groundY - 6) {
-        const onPad = shipRef.current.x >= padRef.current.x && shipRef.current.x <= padRef.current.x + padRef.current.w;
-        const safeVX = Math.max(8, 20 - (level - 1) * (0.9 + difficulty * 0.45));
-        const safeVY = Math.max(12, 28 - (level - 1) * (1.1 + difficulty * 0.55));
-        const safeAngle = Math.max(0.1, 0.22 - (level - 1) * (0.008 + difficulty * 0.004));
-        const safe = Math.abs(shipRef.current.vx) <= safeVX && Math.abs(shipRef.current.vy) <= safeVY && Math.abs(shipRef.current.a) <= safeAngle;
-        setState(onPad && safe ? "won" : "crashed");
-        registerOutcome(onPad && safe ? "win" : "fail", level);
-        shipRef.current.y = groundY - 6;
+      const shipBottom = shipRef.current.y + 8;
+      const padTop = padRef.current.y - PAD_HEIGHT / 2;
+      const padLeft = padRef.current.x;
+      const padRight = padRef.current.x + padRef.current.w;
+      const angleDeg = Math.abs((shipRef.current.a * 180) / Math.PI);
+      const canLand =
+        Math.abs(shipRef.current.vy) < MAX_SAFE_VY &&
+        Math.abs(shipRef.current.vx) < 1.2 &&
+        angleDeg < MAX_SAFE_ANGLE &&
+        shipBottom >= padTop &&
+        shipRef.current.x > padLeft &&
+        shipRef.current.x < padRight;
+
+      if (shipBottom >= groundY) {
+        const onPad = shipRef.current.x > padLeft && shipRef.current.x < padRight;
+        const success = onPad && canLand;
+        setState(success ? "won" : "crashed");
+        registerOutcome(success ? "win" : "fail", level);
+        shipRef.current.y = groundY - 8;
         shipRef.current.vx = 0;
         shipRef.current.vy = 0;
+        thrustPowerRef.current = 0;
       }
     }
 
@@ -645,7 +726,7 @@ function LanderGame({ onExit }: { onExit: () => void }) {
     }
     ctx.stroke();
     ctx.fillStyle = "#64748b";
-    ctx.fillRect(padRef.current.x, padRef.current.y - 2, padRef.current.w, 4);
+    ctx.fillRect(padRef.current.x, padRef.current.y - PAD_HEIGHT / 2, padRef.current.w, PAD_HEIGHT);
 
     ctx.save();
     ctx.translate(shipRef.current.x, shipRef.current.y);
@@ -668,11 +749,14 @@ function LanderGame({ onExit }: { onExit: () => void }) {
     }
     ctx.restore();
 
-    ctx.fillStyle = "#f8fafc";
-    ctx.font = "600 18px ui-monospace, Menlo, Consolas, monospace";
+    const hudScale = Math.max(0.8, getScale(800, 600));
+    ctx.fillStyle = UI_TEXT;
+    ctx.font = `600 ${Math.max(14, Math.floor(18 * hudScale))}px ui-monospace, Menlo, Consolas, monospace`;
     ctx.fillText(`Fuel ${Math.round(fuel)}`, 14, 24);
+    ctx.fillStyle = UI_ACCENT;
     ctx.fillText(`Level ${level}`, 14, 46);
-    ctx.fillText(`Diff x${difficultyScaleRef.current.toFixed(2)}`, 14, 68);
+    ctx.fillStyle = UI_MUTED;
+    ctx.fillText(`Easy Assist`, 14, 68);
     if (state !== "running") {
       ctx.fillStyle = "rgba(0,0,0,0.45)";
       ctx.fillRect(w * 0.22, h * 0.2, w * 0.56, 90);
@@ -692,20 +776,18 @@ function LanderGame({ onExit }: { onExit: () => void }) {
       title="Lunar Lander"
       subtitle="Hold left / thrust / right"
       onExit={onExit}
-      footer={
-        <div className="space-y-2">
-          <div className="grid grid-cols-4 gap-2">
-            <button type="button" onTouchStart={() => { leftRef.current = true; }} onTouchEnd={() => { leftRef.current = false; }} onTouchCancel={() => { leftRef.current = false; }} className={TOUCH_BTN_SUBTLE}>Left</button>
-            <button type="button" onTouchStart={() => { thrustRef.current = true; }} onTouchEnd={() => { thrustRef.current = false; }} onTouchCancel={() => { thrustRef.current = false; }} className={TOUCH_BTN_BASE}>Thrust</button>
-            <button type="button" onTouchStart={() => { rightRef.current = true; }} onTouchEnd={() => { rightRef.current = false; }} onTouchCancel={() => { rightRef.current = false; }} className={TOUCH_BTN_SUBTLE}>Right</button>
-            <button type="button" onClick={state === "won" ? nextLevel : restart} className={TOUCH_BTN_BASE}>
-              {state === "won" ? "Next Level" : "Restart"}
-            </button>
-          </div>
-        </div>
-      }
     >
-      <div ref={containerRef} className="h-full w-full"><canvas ref={canvasRef} className="h-full w-full" /></div>
+      <div ref={containerRef} className="h-full w-full">
+        <canvas ref={canvasRef} className="lander-canvas h-full w-full" />
+        <div className="lander-controls">
+          <button type="button" onTouchStart={() => { leftRef.current = true; }} onTouchEnd={() => { leftRef.current = false; }} onTouchCancel={() => { leftRef.current = false; }} className={TOUCH_BTN_SUBTLE}>Left</button>
+          <button type="button" onTouchStart={() => { thrustRef.current = true; }} onTouchEnd={() => { thrustRef.current = false; }} onTouchCancel={() => { thrustRef.current = false; }} className={TOUCH_BTN_BASE}>Thrust</button>
+          <button type="button" onTouchStart={() => { rightRef.current = true; }} onTouchEnd={() => { rightRef.current = false; }} onTouchCancel={() => { rightRef.current = false; }} className={TOUCH_BTN_SUBTLE}>Right</button>
+          <button type="button" onClick={state === "won" ? nextLevel : restart} className={TOUCH_BTN_BASE}>
+            {state === "won" ? "Next Level" : "Restart"}
+          </button>
+        </div>
+      </div>
     </GameShell>
   );
 }
@@ -715,14 +797,22 @@ function PongGame({ onExit }: { onExit: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const playerY = useRef(200);
   const aiY = useRef(200);
-  const ball = useRef({ x: 300, y: 200, vx: 240, vy: 160 });
+  const ball = useRef({ x: 300, y: 200, vx: 240 * GLOBAL_SPEED, vy: 160 * GLOBAL_SPEED });
   const [score, setScore] = useState({ you: 0, ai: 0 });
 
   useCanvasResize(containerRef, canvasRef);
+  useEffect(() => {
+    ensureGlobalKeyListeners();
+  }, []);
   const resetRound = useCallback((dir: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    ball.current = { x: canvas.width / 2, y: canvas.height / 2, vx: 240 * dir, vy: (Math.random() > 0.5 ? 1 : -1) * 140 };
+    ball.current = {
+      x: canvas.width / 2,
+      y: canvas.height / 2,
+      vx: 240 * GLOBAL_SPEED * dir,
+      vy: (Math.random() > 0.5 ? 1 : -1) * 140 * GLOBAL_SPEED
+    };
   }, []);
   const restart = useCallback(() => {
     setScore({ you: 0, ai: 0 });
@@ -739,6 +829,9 @@ function PongGame({ onExit }: { onExit: () => void }) {
     const h = canvas.height;
     const paddleH = Math.max(90, Math.floor(h * 0.18));
     const paddleW = 10;
+    const paddleSpeed = Math.max(10, h * 0.015);
+    if (globalKeys.ArrowUp || globalKeys.KeyW) playerY.current -= paddleSpeed;
+    if (globalKeys.ArrowDown || globalKeys.KeyS) playerY.current += paddleSpeed;
     aiY.current += (ball.current.y - (aiY.current + paddleH / 2)) * 0.08;
     aiY.current = Math.max(0, Math.min(h - paddleH, aiY.current));
     playerY.current = Math.max(0, Math.min(h - paddleH, playerY.current));
@@ -764,7 +857,7 @@ function PongGame({ onExit }: { onExit: () => void }) {
     ctx.beginPath();
     ctx.arc(ball.current.x, ball.current.y, 8, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "#a5f3fc";
+    ctx.fillStyle = UI_ACCENT;
     ctx.textAlign = "center";
     ctx.font = "bold 22px ui-monospace, Menlo, Consolas, monospace";
     ctx.fillText(`${score.you} : ${score.ai}`, w / 2, 30);
@@ -810,7 +903,7 @@ function BreakoutGame({ onExit }: { onExit: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const paddleX = useRef(120);
-  const ball = useRef({ x: 160, y: 300, vx: 180, vy: -180 });
+  const ball = useRef({ x: 160, y: 300, vx: 180 * GLOBAL_SPEED, vy: -180 * GLOBAL_SPEED });
   const bricks = useRef<Brick[]>([]);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
@@ -845,7 +938,7 @@ function BreakoutGame({ onExit }: { onExit: () => void }) {
     learnerRef.current = createLinearDifficultyLearner();
     difficultyScaleRef.current = 1;
     paddleX.current = canvas.width * 0.4;
-    ball.current = { x: canvas.width / 2, y: canvas.height * 0.72, vx: 180, vy: -180 };
+    ball.current = { x: canvas.width / 2, y: canvas.height * 0.72, vx: 180 * GLOBAL_SPEED, vy: -180 * GLOBAL_SPEED };
     spawn(canvas.width, firstLevel, 1);
     setScore(0);
     setLives(3);
@@ -873,7 +966,7 @@ function BreakoutGame({ onExit }: { onExit: () => void }) {
     const difficulty = difficultyScaleRef.current;
     setLevel((prev) => {
       const upcoming = prev + 1;
-      const speed = 180 + (upcoming - 1) * Math.round(10 + difficulty * 10);
+      const speed = (180 + (upcoming - 1) * Math.round(10 + difficulty * 10)) * GLOBAL_SPEED;
       paddleX.current = canvas.width * 0.4;
       ball.current = { x: canvas.width / 2, y: canvas.height * 0.72, vx: speed, vy: -speed };
       spawn(canvas.width, upcoming, difficulty);
@@ -921,7 +1014,7 @@ function BreakoutGame({ onExit }: { onExit: () => void }) {
             registerOutcome("fail", level);
             return 0;
           }
-          ball.current = { x: w / 2, y: h * 0.72, vx: 180, vy: -180 };
+          ball.current = { x: w / 2, y: h * 0.72, vx: 180 * GLOBAL_SPEED, vy: -180 * GLOBAL_SPEED };
           return next;
         });
       }
@@ -944,9 +1037,11 @@ function BreakoutGame({ onExit }: { onExit: () => void }) {
     ctx.beginPath();
     ctx.arc(ball.current.x, ball.current.y, 7, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "#a5f3fc";
-    ctx.font = "600 18px ui-sans-serif, system-ui";
+    const hudScale = Math.max(0.8, getScale(800, 600));
+    ctx.fillStyle = UI_ACCENT;
+    ctx.font = `600 ${Math.max(14, Math.floor(18 * hudScale))}px ui-sans-serif, system-ui`;
     ctx.fillText(`Score ${score}`, 12, 26);
+    ctx.fillStyle = UI_MUTED;
     ctx.fillText(`Lives ${lives}`, 12, 50);
     ctx.fillText(`Level ${level}`, 12, 74);
     ctx.fillText(`Diff x${difficultyScaleRef.current.toFixed(2)}`, 12, 98);
