@@ -1,7 +1,6 @@
 ﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
-import GameModelSuggestion from "@/components/games/GameModelSuggestion";
 
 type SnakeMobileProps = {
   onExit?: () => void;
@@ -25,6 +24,7 @@ export default function SnakeMobile({ onExit }: SnakeMobileProps) {
   const foodRef = useRef<Point>({ x: 16, y: 9 });
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
+  const onSnakeGameOver = () => setGameOver(true);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -79,7 +79,7 @@ export default function SnakeMobile({ onExit }: SnakeMobileProps) {
         const head = snakeRef.current[0];
         const moved = { x: head.x + dirRef.current.x, y: head.y + dirRef.current.y };
         if (moved.x < 0 || moved.y < 0 || moved.x >= GRID || moved.y >= GRID || snakeRef.current.some((p) => p.x === moved.x && p.y === moved.y)) {
-          setGameOver(true);
+          onSnakeGameOver();
         } else {
           snakeRef.current = [moved, ...snakeRef.current];
           if (moved.x === foodRef.current.x && moved.y === foodRef.current.y) {
@@ -172,15 +172,6 @@ export default function SnakeMobile({ onExit }: SnakeMobileProps) {
       ctx.ellipse(fx + cell * 0.2, fy - cell * 0.3, cell * 0.12, cell * 0.07, -0.45, 0, Math.PI * 2);
       ctx.fill();
 
-      if (gameOver) {
-        ctx.fillStyle = "rgba(0,0,0,0.55)";
-        ctx.fillRect(ox + boardW * 0.2, oy + boardH * 0.42, boardW * 0.6, 56);
-        ctx.fillStyle = "#fff";
-        ctx.font = "bold 18px ui-sans-serif, system-ui, sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText("Game Over", ox + boardW / 2, oy + boardH * 0.42 + 34);
-      }
-
       rafRef.current = requestAnimationFrame(render);
     };
 
@@ -229,7 +220,7 @@ export default function SnakeMobile({ onExit }: SnakeMobileProps) {
     applyTouchDirection(touch);
   };
 
-  const restart = () => {
+  const startSnakeGame = () => {
     snakeRef.current = [{ x: 8, y: 11 }, { x: 7, y: 11 }, { x: 6, y: 11 }];
     dirRef.current = { x: 1, y: 0 };
     nextDirRef.current = { x: 1, y: 0 };
@@ -254,14 +245,19 @@ export default function SnakeMobile({ onExit }: SnakeMobileProps) {
 
       <div ref={containerRef} className="relative h-[65vh] w-full flex-1 bg-black md:h-[520px]">
         <canvas ref={canvasRef} className="h-full w-full touch-none" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} />
+        <button
+          id="snakeRestartBtn"
+          type="button"
+          onClick={startSnakeGame}
+          className="snake-restart-btn"
+          style={{ display: gameOver ? "block" : "none" }}
+        >
+          Restart
+        </button>
       </div>
 
       <div className="space-y-3 border-t border-cyan-400/20 bg-white/5 p-3 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
         <p className="text-sm text-cyan-100">Score: {score} - Swipe on the board to turn</p>
-        <button type="button" onClick={restart} className="w-full rounded-2xl border border-cyan-400/30 bg-cyan-500/15 p-3 shadow-[0_0_24px_rgba(34,211,238,0.18)]">
-          Restart
-        </button>
-        <GameModelSuggestion game="snake" compact />
       </div>
     </div>
   );

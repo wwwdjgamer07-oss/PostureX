@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import GameModelSuggestion from "@/components/games/GameModelSuggestion";
 
 type BreakoutMobileProps = {
   onExit?: () => void;
@@ -27,7 +26,6 @@ type CanvasMetrics = {
 const MAX_DPR = 3;
 
 export default function BreakoutMobile({ onExit }: BreakoutMobileProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number | null>(null);
   const sizeRef = useRef({ width: 0, height: 0, dpr: 1 });
@@ -196,34 +194,31 @@ export default function BreakoutMobile({ onExit }: BreakoutMobileProps) {
   }, [getMetrics]);
 
   useEffect(() => {
-    const container = containerRef.current;
     const canvas = canvasRef.current;
-    if (!container || !canvas) return;
+    if (!canvas) return;
     canvas.style.touchAction = "none";
 
-    const resize = () => {
-      const width = container.clientWidth;
-      const height = container.clientHeight;
+    const resizeBreakoutCanvas = () => {
+      const rect = canvas.getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
+      if (width <= 0 || height <= 0) return;
       const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
       canvas.width = Math.max(1, Math.floor(width * dpr));
       canvas.height = Math.max(1, Math.floor(height * dpr));
       sizeRef.current = { width, height, dpr };
       resetLayoutState();
     };
 
-    resize();
-
-    const obs = new ResizeObserver(resize);
-    obs.observe(container);
-    window.addEventListener("resize", resize);
-    window.addEventListener("orientationchange", resize);
+    resizeBreakoutCanvas();
+    const raf = window.requestAnimationFrame(resizeBreakoutCanvas);
+    window.addEventListener("resize", resizeBreakoutCanvas);
+    window.addEventListener("orientationchange", resizeBreakoutCanvas);
 
     return () => {
-      obs.disconnect();
-      window.removeEventListener("resize", resize);
-      window.removeEventListener("orientationchange", resize);
+      window.cancelAnimationFrame(raf);
+      window.removeEventListener("resize", resizeBreakoutCanvas);
+      window.removeEventListener("orientationchange", resizeBreakoutCanvas);
     };
   }, [resetLayoutState]);
 
@@ -286,13 +281,12 @@ export default function BreakoutMobile({ onExit }: BreakoutMobileProps) {
         </button>
       </div>
 
-      <div ref={containerRef} className="relative h-[65vh] w-full flex-1 md:h-[520px]">
-        <canvas ref={canvasRef} className="h-full w-full touch-none" />
+      <div className="breakout-wrap flex-1">
+        <canvas id="breakoutCanvas" ref={canvasRef} className="touch-none" />
       </div>
 
-      <div className="space-y-2 border-t border-cyan-400/20 bg-white/5 p-3 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
+      <div className="breakout-controls space-y-2 border-t border-cyan-400/20 bg-white/5 p-3 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
         <p className="text-xs text-cyan-100/85">Touch and drag on the arena to position the paddle.</p>
-        <GameModelSuggestion game="breakout" compact />
       </div>
     </div>
   );

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GameShell, usePostureFeed, type SessionResult } from "@/components/games/GameCore";
-import GameModelSuggestion from "@/components/games/GameModelSuggestion";
 import { getAlignmentStability, getBalanceValue, getCorrectionResponse, type GamePostureSample } from "@/lib/games/postureAdapter";
 import { computeUnifiedGameScore } from "@/lib/games/scoring";
 import { calculateRewards, readRewardProgress, saveRewardProgress } from "@/lib/games/rewards";
@@ -204,7 +203,6 @@ export default function BalanceGame() {
       onStop={() => finalize("manual")}
       hud={hud}
       result={result}
-      footer={<GameModelSuggestion game="balance" compact />}
     >
       <div className="relative flex h-full w-full items-center justify-center">
         <div className="absolute h-[420px] w-[420px] animate-[spin_28s_linear_infinite] rounded-full border border-cyan-300/20" />

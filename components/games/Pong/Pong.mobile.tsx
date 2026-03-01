@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import GameModelSuggestion from "@/components/games/GameModelSuggestion";
 
 type PongMobileProps = {
   onExit?: () => void;
@@ -171,7 +170,6 @@ export default function PongMobile({ onExit }: PongMobileProps) {
 
       <div className="space-y-2 border-t border-cyan-400/20 bg-white/5 p-3 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
         <p className="text-xs text-cyan-100/85">Touch and drag anywhere on the arena to move your paddle.</p>
-        <GameModelSuggestion game="pong" compact />
       </div>
     </div>
   );

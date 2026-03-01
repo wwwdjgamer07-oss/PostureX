@@ -557,7 +557,7 @@ export function GlobalChatbot() {
           <button
             type="button"
             onClick={() => setIsOpen((prev) => !prev)}
-            className="px-global-chat-trigger relative grid h-14 w-14 place-items-center rounded-full border border-cyan-300/50 bg-slate-900/75 text-cyan-100 shadow-[0_0_30px_rgba(34,211,238,0.28)] backdrop-blur-xl transition duration-300 hover:scale-[1.03] hover:shadow-[0_0_40px_rgba(34,211,238,0.34)] focus:outline-none focus:ring-2 focus:ring-cyan-300/55"
+            className="px-global-chat-trigger px-ai-fab relative grid h-14 w-14 place-items-center rounded-full border border-cyan-300/50 bg-slate-900/75 text-cyan-100 shadow-[0_0_30px_rgba(34,211,238,0.28)] backdrop-blur-xl transition duration-300 hover:scale-[1.03] hover:shadow-[0_0_40px_rgba(34,211,238,0.34)] focus:outline-none focus:ring-2 focus:ring-cyan-300/55"
             aria-label={personalizedLabel}
           >
             <span className="absolute inset-0 rounded-full border border-cyan-300/35 animate-pulse" />

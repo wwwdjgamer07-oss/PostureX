@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Brain, Brackets, CircleDot, Gamepad2, Grid3X3, Layers, Maximize2, Minimize2, Rocket, Volume2, VolumeX, X } from "lucide-react";
-import GameModelSuggestion from "@/components/games/GameModelSuggestion";
 
 type GameId = "snake" | "lander" | "xo" | "pong" | "breakout" | "memory";
 
@@ -140,13 +139,28 @@ function useCanvasResize(containerRef: React.RefObject<HTMLDivElement>, canvasRe
   }, [containerRef, canvasRef]);
 }
 
-function GameShell({ title, subtitle, onExit, children, footer }: { title: string; subtitle: string; onExit: () => void; children: React.ReactNode; footer?: React.ReactNode }) {
+function GameShell({
+  title,
+  subtitle,
+  headerMeta,
+  onExit,
+  children,
+  footer
+}: {
+  title: string;
+  subtitle: string;
+  headerMeta?: React.ReactNode;
+  onExit: () => void;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+}) {
   return (
     <div className="fixed inset-0 z-50 flex min-h-[100dvh] flex-col bg-[#020617] text-white">
       <header className="flex h-12 items-center justify-between border-b border-cyan-400/20 bg-black/30 px-3">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.14em] text-cyan-100">{title}</p>
           <p className="text-[10px] uppercase tracking-[0.14em] text-slate-400">{subtitle}</p>
+          {headerMeta}
         </div>
         <button type="button" onClick={onExit} className="rounded-md border border-cyan-300/45 bg-slate-900/70 px-3 py-1 text-xs text-cyan-100">Exit</button>
       </header>
@@ -216,7 +230,7 @@ function SnakeGame({ onExit }: { onExit: () => void }) {
     osc.stop(now + ms / 1000);
   }, [ensureAudio]);
 
-  const restart = useCallback(() => {
+  const startSnakeGame = useCallback(() => {
     snakeRef.current = [{ x: 9, y: 10 }, { x: 8, y: 10 }, { x: 7, y: 10 }];
     dirRef.current = { x: 1, y: 0 };
     nextDirRef.current = { x: 1, y: 0 };
@@ -257,12 +271,12 @@ function SnakeGame({ onExit }: { onExit: () => void }) {
       if (k === "arrowdown" || k === "s") setDir(0, 1);
       if (k === "arrowleft" || k === "a") setDir(-1, 0);
       if (k === "arrowright" || k === "d") setDir(1, 0);
-      if (k === "r") restart();
+      if (k === "r") startSnakeGame();
       if (k === "m") setMuted((v) => !v);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [restart, setDir]);
+  }, [startSnakeGame, setDir]);
 
   useAnimationFrame((dt) => {
     const canvas = canvasRef.current;
@@ -404,14 +418,6 @@ function SnakeGame({ onExit }: { onExit: () => void }) {
     ctx.ellipse(fx + cell * 0.2, fy - cell * 0.3, cell * 0.12, cell * 0.07, -0.45, 0, Math.PI * 2);
     ctx.fill();
 
-    if (over) {
-      ctx.fillStyle = "rgba(46,79,30,0.72)";
-      ctx.fillRect(ox + boardW * 0.35, oy + boardH * 0.15, boardW * 0.3, 72);
-      ctx.fillStyle = "#ffffff";
-      ctx.textAlign = "center";
-      ctx.font = "bold 16px ui-sans-serif, system-ui";
-      ctx.fillText("Press Restart", ox + boardW / 2, oy + boardH * 0.22 + 8);
-    }
   }, true);
 
   return (
@@ -434,7 +440,7 @@ function SnakeGame({ onExit }: { onExit: () => void }) {
         </div>
       </header>
       <div className="min-h-0 flex-1 p-5">
-        <div ref={containerRef} className="mx-auto h-full w-full max-w-[980px] rounded-sm border-[5px] border-[#6ea33f] bg-[#a5d64f]">
+        <div ref={containerRef} className="relative mx-auto h-full w-full max-w-[980px] rounded-sm border-[5px] border-[#6ea33f] bg-[#a5d64f]">
           <canvas
             ref={canvasRef}
             className="h-full w-full touch-none"
@@ -454,14 +460,15 @@ function SnakeGame({ onExit }: { onExit: () => void }) {
               else setDir(0, dy > 0 ? 1 : -1);
             }}
           />
-        </div>
-      </div>
-      <div className="absolute inset-x-0 bottom-0 z-20 p-3 pb-[env(safe-area-inset-bottom)]">
-        <button type="button" onClick={restart} className="w-full rounded-lg border border-cyan-300/45 bg-cyan-400/12 px-4 py-2 text-sm font-semibold text-cyan-100 backdrop-blur-md active:bg-cyan-400/24">
-          Restart
-        </button>
-        <div className="mt-2">
-          <GameModelSuggestion game="snake" compact />
+          <button
+            id="snakeRestartBtn"
+            type="button"
+            onClick={startSnakeGame}
+            className="snake-restart-btn"
+            style={{ display: over ? "block" : "none" }}
+          >
+            Restart
+          </button>
         </div>
       </div>
     </div>
@@ -695,7 +702,6 @@ function LanderGame({ onExit }: { onExit: () => void }) {
               {state === "won" ? "Next Level" : "Restart"}
             </button>
           </div>
-          <GameModelSuggestion game="lander" compact />
         </div>
       }
     >
@@ -775,7 +781,6 @@ function PongGame({ onExit }: { onExit: () => void }) {
             <p className="flex-1 text-sm text-cyan-100">You {score.you} - {score.ai} AI</p>
             <button type="button" onClick={restart} className={TOUCH_ACTION_BTN}>Restart</button>
           </div>
-          <GameModelSuggestion game="pong" compact />
         </div>
       }
     >
@@ -971,7 +976,6 @@ function BreakoutGame({ onExit }: { onExit: () => void }) {
               {awaitingNextLevel ? "Next Level" : "Restart"}
             </button>
           </div>
-          <GameModelSuggestion game="breakout" compact />
         </div>
       }
     >
@@ -999,34 +1003,150 @@ function BreakoutGame({ onExit }: { onExit: () => void }) {
 
 function XOGame({ onExit }: { onExit: () => void }) {
   type Mark = "X" | "O";
+  type Result = Mark | "draw" | null;
   const [board, setBoard] = useState<Array<Mark | null>>(Array(9).fill(null));
-  const [winner, setWinner] = useState<Mark | "draw" | null>(null);
+  const [winner, setWinner] = useState<Result>(null);
+  const [tttLevel, setTttLevel] = useState<1 | 2 | 3>(1);
 
-  const checkWinner = useCallback((candidate: Array<Mark | null>): Mark | "draw" | null => {
+  const resetTTT = () => {
+    setBoard(Array(9).fill(null));
+    setWinner(null);
+  };
+
+  const levelText = `Level ${tttLevel}`;
+  const levelName = tttLevel === 1 ? "Easy" : tttLevel === 2 ? "Medium" : "Hard";
+
+  useEffect(() => {
+    const el = document.getElementById("tttLevelLabel");
+    if (el) {
+      el.textContent = `Level ${tttLevel} · ${levelName}`;
+    }
+  }, [levelName, tttLevel]);
+
+  const checkWinner = (candidate: Array<Mark | null>): Result => {
     const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-    for (const [a, b, c] of lines) if (candidate[a] && candidate[a] === candidate[b] && candidate[a] === candidate[c]) return candidate[a] as Mark;
+    for (const [a, b, c] of lines) {
+      if (candidate[a] && candidate[a] === candidate[b] && candidate[a] === candidate[c]) {
+        return candidate[a] as Mark;
+      }
+    }
     if (candidate.every(Boolean)) return "draw";
     return null;
-  }, []);
-
-  const restart = () => { setBoard(Array(9).fill(null)); setWinner(null); };
-  const aiMove = (candidate: Array<Mark | null>) => {
-    const empty = candidate.map((v, i) => (v ? -1 : i)).filter((i) => i >= 0);
-    if (!empty.length) return candidate;
-    const idx = empty[Math.floor(Math.random() * empty.length)];
-    const next = [...candidate];
-    next[idx] = "O";
-    return next;
   };
+
+  function randomMove(candidate: Array<Mark | null>) {
+    const empty = candidate
+      .map((v, i) => (v === null ? i : null))
+      .filter((v): v is number => v !== null);
+    if (empty.length === 0) return null;
+    return empty[Math.floor(Math.random() * empty.length)] ?? null;
+  }
+
+  function findWinningMove(candidate: Array<Mark | null>, mark: Mark) {
+    for (let i = 0; i < candidate.length; i += 1) {
+      if (candidate[i] !== null) continue;
+      candidate[i] = mark;
+      const result = checkWinner(candidate);
+      candidate[i] = null;
+      if (result === mark) return i;
+    }
+    return null;
+  }
+
+  function mediumMove(candidate: Array<Mark | null>) {
+    const win = findWinningMove(candidate, "O");
+    if (win !== null) return win;
+    const block = findWinningMove(candidate, "X");
+    if (block !== null) return block;
+    return randomMove(candidate);
+  }
+
+  function minimax(candidate: Array<Mark | null>, depth: number, isMax: boolean): number {
+    const result = checkWinner(candidate);
+    if (result === "O") return 10 - depth;
+    if (result === "X") return depth - 10;
+    if (result === "draw") return 0;
+
+    if (isMax) {
+      let best = -Infinity;
+      for (let i = 0; i < candidate.length; i += 1) {
+        if (candidate[i] !== null) continue;
+        candidate[i] = "O";
+        best = Math.max(best, minimax(candidate, depth + 1, false));
+        candidate[i] = null;
+      }
+      return best;
+    }
+
+    let best = Infinity;
+    for (let i = 0; i < candidate.length; i += 1) {
+      if (candidate[i] !== null) continue;
+      candidate[i] = "X";
+      best = Math.min(best, minimax(candidate, depth + 1, true));
+      candidate[i] = null;
+    }
+    return best;
+  }
+
+  function minimaxMove(candidate: Array<Mark | null>) {
+    let bestScore = -Infinity;
+    let move: number | null = null;
+    for (let i = 0; i < candidate.length; i += 1) {
+      if (candidate[i] !== null) continue;
+      candidate[i] = "O";
+      const score = minimax(candidate, 0, false);
+      candidate[i] = null;
+      if (score > bestScore) {
+        bestScore = score;
+        move = i;
+      }
+    }
+    return move;
+  }
+
+  function aiMove(candidate: Array<Mark | null>) {
+    if (tttLevel === 1) return randomMove(candidate);
+    if (tttLevel === 2) return mediumMove(candidate);
+    return minimaxMove(candidate);
+  }
+
+  const onPlayerWin = () => {
+    setTttLevel((prev) => {
+      const next = prev < 3 ? ((prev + 1) as 1 | 2 | 3) : prev;
+      return next;
+    });
+    resetTTT();
+  };
+
+  const restart = () => {
+    resetTTT();
+  };
+
   const play = (i: number) => {
     if (winner || board[i]) return;
     const next = [...board];
     next[i] = "X";
     const first = checkWinner(next);
-    if (first) { setBoard(next); setWinner(first); return; }
-    const withAi = aiMove(next);
-    const second = checkWinner(withAi);
-    setBoard(withAi);
+    if (first === "X") {
+      onPlayerWin();
+      return;
+    }
+    if (first) {
+      setBoard(next);
+      setWinner(first);
+      return;
+    }
+
+    const aiIndex = aiMove(next);
+    if (aiIndex === null) {
+      setBoard(next);
+      setWinner("draw");
+      return;
+    }
+
+    next[aiIndex] = "O";
+    const second = checkWinner(next);
+    setBoard(next);
     if (second) setWinner(second);
   };
 
@@ -1034,6 +1154,11 @@ function XOGame({ onExit }: { onExit: () => void }) {
     <GameShell
       title="Tic-Tac-Toe"
       subtitle="You are X"
+      headerMeta={
+        <div id="tttLevelLabel" className="text-[10px] uppercase tracking-[0.12em] text-cyan-200/90">
+          {levelText} · {levelName}
+        </div>
+      }
       onExit={onExit}
       footer={
         <div className="space-y-2">
@@ -1041,7 +1166,6 @@ function XOGame({ onExit }: { onExit: () => void }) {
             <p className="flex-1 text-sm text-cyan-100">{winner === "draw" ? "Draw" : winner ? `${winner} wins` : "Your move"}</p>
             <button type="button" onClick={restart} className={TOUCH_ACTION_BTN}>Restart</button>
           </div>
-          <GameModelSuggestion game="xo" compact />
         </div>
       }
     >
@@ -1108,7 +1232,6 @@ function MemoryGame({ onExit }: { onExit: () => void }) {
             <p className="flex-1 text-sm text-cyan-100">Moves: {moves} {won ? "· Complete" : ""}</p>
             <button type="button" onClick={restart} className={TOUCH_ACTION_BTN}>Restart</button>
           </div>
-          <GameModelSuggestion game="memory" compact />
         </div>
       }
     >

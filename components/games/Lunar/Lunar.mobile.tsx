@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import LunarLearningPanel from "./LunarLearningPanel";
 
 type LunarMobileProps = {
   onExit?: () => void;
@@ -189,7 +188,6 @@ export default function LunarMobile({ onExit }: LunarMobileProps) {
 
       <div className="space-y-2 border-t border-cyan-400/20 bg-white/5 p-3 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
         <p className="text-xs text-cyan-100/85">Touch left side to rotate, touch right side to thrust.</p>
-        <LunarLearningPanel compact />
       </div>
     </div>
   );

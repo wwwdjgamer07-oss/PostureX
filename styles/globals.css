@@ -277,6 +277,66 @@ div {
     line-height: 1.45;
   }
 
+  .px-ai-fab {
+    position: fixed;
+    right: 16px;
+    bottom: 90px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 1px solid rgba(120, 200, 255, 0.4);
+    background: rgba(20, 40, 70, 0.35);
+    backdrop-filter: blur(10px);
+    color: #9fe0ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+  }
+
+  .px-game-container {
+    padding-bottom: 0;
+  }
+
+  .breakout-wrap {
+    width: 100%;
+    max-width: 100vw;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  #breakoutCanvas {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 9 / 16;
+    max-height: 65vh;
+    border-radius: 16px;
+    background: #000;
+  }
+
+  .breakout-controls {
+    width: 100%;
+    margin-top: 12px;
+  }
+
+  .snake-restart-btn {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    padding: 14px 28px;
+    border-radius: 14px;
+    border: 1px solid rgba(120, 255, 160, 0.5);
+    background: rgba(40, 120, 60, 0.35);
+    backdrop-filter: blur(10px);
+    color: #d8ffe8;
+    font-size: 18px;
+    font-weight: 600;
+    display: none;
+    z-index: 5;
+  }
+
   .px-grid-pattern {
     background-image: linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
       linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
@@ -881,11 +941,6 @@ html[data-ui-skin="px-elite"] .px-panel {
 
   .app-root {
     overscroll-behavior-y: auto;
-  }
-
-  body.px-play-game-active .px-global-chat-trigger-wrap,
-  body.px-play-game-active .px-global-chat-wrap {
-    display: none;
   }
 }
 

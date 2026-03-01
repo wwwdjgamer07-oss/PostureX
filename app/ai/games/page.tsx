@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { Gamepad2 } from "lucide-react";
-import GameModelSuggestion from "@/components/games/GameModelSuggestion";
 
 const BalanceGame = dynamic(() => import("@/components/games/BalanceGame"), { ssr: false });
 const SlouchGame = dynamic(() => import("@/components/games/SlouchGame"), { ssr: false });
@@ -95,9 +94,6 @@ export default function AIGamesPage() {
                   </span>
                 </div>
               </button>
-              <div className="px-4 pb-4">
-                <GameModelSuggestion game={key} compact />
-              </div>
             </article>
           );
         })}

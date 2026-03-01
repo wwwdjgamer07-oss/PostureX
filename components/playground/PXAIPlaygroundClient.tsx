@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Cpu, Gamepad2, Sparkles } from "lucide-react";
 import { aiChat, aiStream, getAIProviders, type AIProvider } from "@/lib/ai";
-import GameModelSuggestion from "@/components/games/GameModelSuggestion";
 import type {
   ImageAnalyzeInput,
   ImageGenerateInput,
@@ -292,9 +291,6 @@ export function PXAIPlaygroundClient() {
             <Link href="/ai/games" className="px-button mt-4 inline-flex">
               Open Posture Games
             </Link>
-            <div className="mt-3">
-              <GameModelSuggestion game="reflex" compact />
-            </div>
           </article>
 
           <article className="px-panel p-6">
@@ -309,9 +305,6 @@ export function PXAIPlaygroundClient() {
             <Link href="/px-play" className="px-button mt-4 inline-flex">
               Open PX Play
             </Link>
-            <div className="mt-3">
-              <GameModelSuggestion game="lander" compact />
-            </div>
           </article>
 
           <TextGenerationCard

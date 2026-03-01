@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GameShell, usePostureFeed, type SessionResult } from "@/components/games/GameCore";
-import GameModelSuggestion from "@/components/games/GameModelSuggestion";
 import { getAlignmentStability, type GamePostureSample } from "@/lib/games/postureAdapter";
 import { computeUnifiedGameScore } from "@/lib/games/scoring";
 import { calculateRewards, readRewardProgress, saveRewardProgress } from "@/lib/games/rewards";
@@ -187,7 +186,6 @@ export default function ReflexGame() {
       onStop={finalize}
       hud={hud}
       result={result}
-      footer={<GameModelSuggestion game="reflex" compact />}
     >
       <div className="mx-auto w-full max-w-md space-y-3 px-4 py-3">
         <div className="rounded-2xl border border-cyan-300/35 bg-cyan-400/10 p-4 backdrop-blur-xl">
